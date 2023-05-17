@@ -1,3 +1,5 @@
+import { PayBankReason } from "common/events/types";
+
 export enum PropertyColor {
     Brown,
     LightBlue,
@@ -26,6 +28,12 @@ export type BoardPosition<T extends PositionType> = {
     type: T;
 } & PositionTypeMap[T];
 
+export interface IBoard {
+    getAllPropertiesOfColor(color: PropertyColor): BoardPosition<PositionType.Property>[]
+    getAllPositionsOfType<T extends PositionType>(type: T): BoardPosition<T>[]
+    positions: BoardPosition<PositionType>[]
+} 
+
 export type PropertyTypeBase = {
     propertyId: number;
     basePrice: number;
@@ -34,6 +42,7 @@ export type PropertyTypeBase = {
 type PositionTypeMap = {
     [PositionType.Property]: PropertyTypeBase & {
         color: PropertyColor
+        baseRent: number
     }
     [PositionType.Railroad]: PropertyTypeBase
     [PositionType.Utility]: PropertyTypeBase
@@ -42,6 +51,7 @@ type PositionTypeMap = {
     [PositionType.Jail]: {}
     [PositionType.CommunityChest]: {}
     [PositionType.Tax]: {
+        taxType: PayBankReason.IncomeTax | PayBankReason.LuxuryTax;
         baseAmount: number;
     }
     [PositionType.GoToJail]: {

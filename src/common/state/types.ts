@@ -1,25 +1,13 @@
-export enum PropertyLevel {
-    Unimproved,
-    OneHouse,
-    TwoHouses,
-    ThreeHouses,
-    FourHouses,
-    Hotel,
-    Skyscraper
-}
+import { IBoard, PositionType, PropertyColor } from "common/board/types";
+import { ChanceCard, CommunityChestCard } from "common/cards/types";
+import { LoanId } from "common/loan/types";
+import { IPlayer } from "common/player/types";
+import { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
+
 
 export enum InterestRateType {
     Fixed,
     Variable
-}
-
-export interface Property {
-    basePrice: number;
-    baseRent: number;
-    level: PropertyLevel;
-    position: number;
-    marketValue: number;
-    currentRent: number;
 }
 
 export enum CreditRating {
@@ -39,27 +27,30 @@ export type PlayerType = "Player" | "Bank";
 
 export type PlayerId = `${PlayerType}_${number}`;
 
-export interface Loan {
-    creditor: PlayerId;
-    debtor: PlayerId;
-    rateType: InterestRateType;
-    currentRate: number;
-    remainingBalance: number;
-    remainingPrincipal: number;
-    remainingInterest: number;
-    initialPrincipal: number;
-    remainingPayments: number;
-    paymentAmount: number;
-    term: number;
-}
 
 export interface PlayerState {
     position: number;
     inJail: boolean;
     inJailSince: number | null;
     cashOnHand: number;
-    loans: Loan[];
-    properties: Property[];
+    creditLoans: Set<LoanId>;
+    debtLoans: Set<LoanId>;
+    properties: Set<number>;
     netWorth: number;
     creditRating: CreditRating;
+    creditRatingLendingThreshold: CreditRating;
+    getOutOfJailFreeCards: number;
+    mostRecentRoll: [number, number] | null;
+}
+
+export interface GameState {
+    playerStore: IPlayerStore;
+    playerTurnOrder: PlayerId[];
+    turn: number;
+    currentPlayerTurn: number;
+    communityChestCards: CommunityChestCard[];
+    chanceCards: ChanceCard[];
+    loanStore: ILoanStore;
+    propertyStore: IPropertyStore;
+    board: IBoard;
 }

@@ -1,10 +1,11 @@
+import { GameEvent } from "common/events/types";
 import type { IPlayer } from "common/player/types";
+import { GameState } from "common/state/types";
 
 export interface IGame {
-    readonly players: IPlayer[];
-    readonly turn:  number;
-    roll(): [number, number];
+    readonly state: GameState;
     start(): void;
     takeTurn(): Promise<void>;
     takePlayerTurn(player: IPlayer): Promise<void>;
+    processEvent(event:Omit<GameEvent, "turn"|"order">): void;
 }

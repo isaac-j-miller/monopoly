@@ -10,9 +10,11 @@ export type RuntimeConfig = {
     bank: {
         startingMoney: number;
         startingInterestRate: number;
+        riskiness: number
     }
     credit: {
         ratingMultiplierOnInterest: Record<CreditRating,number>;
+        ratingMultiplierOnDebtAssetValue: Record<CreditRating, number>;
     }
     jail: {
         duration: number;

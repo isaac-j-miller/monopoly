@@ -1,27 +1,45 @@
 import crypto from "crypto";
 import { IPlayer } from "common/player/types";
 import { RuntimeConfig } from "common/config/types";
+import { EventBus } from "common/events/bus";
+import { CompletePlayerTurnEvent, CompleteTurnEvent, EventType, GameEvent, RollEvent } from "common/events/types";
+import { PlayerId } from "common/state/types";
 import { IGame } from "./types";
-import { Board } from "common/board/board";
 
 export class Game implements IGame {
-    private _players: IPlayer[];
-    private _turn: number;
-    constructor(private config: RuntimeConfig, players: IPlayer[]) {
-        this._players = players;
-        this._turn = 0;
+    constructor(
+        private config: RuntimeConfig, 
+        private bus: EventBus,
+        ) {
     }
     public get turn() {
-        return this._turn;
+        return this.bus.state.turn;
+    }
+    public get currentPlayerTurn() {
+        return this.bus.state.currentPlayerTurn;
     }
     public get players() {
-        return this._players;
+        return this.bus.state.playerTurnOrder.map(id=>this.bus.state.playerStore.get(id));
     }
-    roll(): [number, number] {
+    public get state() {
+        return this.bus.state;
+    }
+    private getRoll(): [number, number] {
         return [
             crypto.randomInt(1,7),
             crypto.randomInt(1,7)
         ]
+    }
+    private roll(player: PlayerId) {
+        const roll = this.getRoll();
+        const rollEvent: RollEvent = {
+            type: EventType.Roll,
+            order: this.currentPlayerTurn,
+            player,
+            roll,
+            turn: this.turn,
+        }
+        this.bus.processEvent(rollEvent);
     }
     async start(): Promise<void> {
         const {config} = this;
@@ -34,33 +52,32 @@ export class Game implements IGame {
         for await (const player of players) {
             await this.takePlayerTurn(player)
         }
-        this._turn++;
-    }
-    private getNewPosition(player: IPlayer, roll: [number, number]): number {
-        if(player.state.inJail) {
-            return player.state.position;
+        const endTurnEvent: CompleteTurnEvent = {
+            order: this.currentPlayerTurn + 1,
+            turn: this.turn,
+            type: EventType.CompleteTurn
         }
-        const add = roll[0]+roll[1] + player.state.position;
-        if(add < Board.length) {
-            return add;
-        }
-        return add - Board.length;
+        this.bus.processEvent(endTurnEvent);
     }
     async takePlayerTurn(player: IPlayer): Promise<void> {
-        const {config} = this;
         if(player.isBank) {
             return;
         }
-        const roll = this.roll();
-        if(
-            player.state.inJail && 
-            (
-                (roll[0]===roll[1]) 
-                || (player.state.inJailSince && this.turn > (player.state.inJailSince + config.jail.duration)))) {
-            player.state.inJail = false;
+        this.roll(player.id);
+        await player.takeTurn();
+        const endPlayerTurnEvent: CompletePlayerTurnEvent = {
+            type: EventType.CompletePlayerTurn,
+            order: this.currentPlayerTurn,
+            turn: this.turn,
+            player: player.id,
         }
-        const newPosition = this.getNewPosition(player, roll);
-        await player.takeTurn(this, newPosition, roll);
+        this.bus.processEvent(endPlayerTurnEvent)
     }
-
+    processEvent(event: Omit<GameEvent, "turn" | "order">): void {
+        this.bus.processEvent({
+            ...event as GameEvent,
+            turn: this.turn,
+            order: this.currentPlayerTurn
+        })
+    }
 }
