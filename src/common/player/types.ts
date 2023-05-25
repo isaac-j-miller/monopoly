@@ -1,6 +1,7 @@
+import { PayBankReason } from "common/events/types";
 import { IGame } from "common/game/types";
-import type { LoanId, LoanQuote } from "common/loan/types";
-import { PropertyQuote } from "common/property/types";
+import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
+import { PropertyLevel, PropertyQuote } from "common/property/types";
 import type { CreditRating, PlayerId } from "common/state/types";
 
 export interface IPlayer {
@@ -13,6 +14,10 @@ export interface IPlayer {
     readonly mostRecentRoll: [number, number] | null;
     readonly creditRatingLendingThreshold: CreditRating;
     readonly cashOnHand: number;
+    readonly properties: Set<number>;
+    readonly creditLoans: Set<LoanId>;
+    readonly debtLoans: Set<LoanId>;
+    readonly getOutOfJailFreeCards: number;
     setMostRecentRoll(roll: [number, number]): void
     setPosition(position: number): void
     getOutOfJail(): void;
@@ -36,7 +41,16 @@ export interface IPlayer {
     register(game: IGame): void;
     getPurchasePropertyQuoteForPlayer(player: PlayerId, propertyId: number): Promise<PropertyQuote|null>
     getLoanQuoteForPlayer(player: PlayerId, amount: number): Promise<LoanQuote|null>
-    getLoanQuotesFromOtherPlayers(amount: number): Promise<LoanQuote[]>
+    getLoanQuotesFromOtherPlayers(amount: number, excludePlayers?: PlayerId[]): Promise<LoanQuote[]>
     getSellPropertyQuotesFromOtherPlayers(propertyId: number, price: number): Promise<PropertyQuote[]>
-    decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>
+    decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>;
+    decideToPayToGetOutOfJail(): Promise<boolean>;
+    decideToUseGetOutOfJailFreeCard(): Promise<boolean>;
+    payCashToBank(amount: number, reason: PayBankReason): void;
+    handleFinanceOption(amount: number, reason: string): Promise<void>;
+    decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean>;
+    getTransferLoanOffersFromOtherPlayers(loanId: LoanId, price: number): Promise<TransferLoanQuote[]>
+    sellLoan(quote: TransferLoanQuote): void;
+    upgradeProperty(propertyId: number, newLevel: PropertyLevel): void;
+    sellPropertyUpgrades(propertyId: number, newLevel: PropertyLevel): void;
 }

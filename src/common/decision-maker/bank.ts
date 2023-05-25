@@ -1,17 +1,41 @@
-import { LoanQuote } from "common/loan/types";
+import { LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { PropertyQuote } from "common/property/types";
 import { InterestRateType, PlayerId } from "common/state/types";
 import { IDecisionMaker } from "./types";
 import { DecisionMakerBase } from "./base";
 
 export class BankDecisionMaker extends DecisionMakerBase implements IDecisionMaker {
-    async takeTurn(): Promise<void> {
-        // the bank doesn't take turns
+    async doOptionalActions(): Promise<void> {
+        // the bank doesn't do anything optional
         return;
     }
+    async decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean> {
+        // TODO: maybe allow bank to buy/sell existing loans
+        return false
+    }
+    async coverCashOnHandShortfall(): Promise<void> {
+        throw new Error("bank doesn't care about cash on hand shortfall (yet)");
+    }
+    async decideHowToFinancePayment(): Promise<LoanQuote | null> {
+        throw new Error("bank cannot take out loans");
+    }
+    async decideToUseGetOutOfJailFreeCard(): Promise<boolean> {
+        throw new Error("bank cannot be in jail");
+    }
+    async decideToPayToGetOutOfJail(): Promise<boolean> {
+        throw new Error("bank cannot be in jail");
+    }
     async decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean> {
-        // TODO: implement
-        return false;
+        const {propertyId, offer} = quote;
+        const property = this.game.state.propertyStore.get(propertyId);
+        const {realValue} = property;
+        if(quote.owner === this.player.id) {
+            // this is a sell quote
+            return offer >= realValue;
+        } else {
+            // this is a buy quote
+            return offer <= realValue;
+        }
     }
     async getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null> {
         const player = this.game.state.playerStore.get(playerId);

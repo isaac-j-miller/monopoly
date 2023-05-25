@@ -2,21 +2,23 @@ import type { IDecisionMaker } from "common/decision-maker/types";
 import { CreditRating, PlayerId, PlayerState } from "common/state/types";
 import type { RuntimeConfig } from "common/config/types";
 import type { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
-import type { LoanId, LoanQuote } from "common/loan/types";
+import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { IGame } from "common/game/types";
 import { PropertyQuote } from "common/property/types";
-import { EventType, LoanCreationEvent, PropertyTransferEvent } from "common/events/types";
+import { EventType, LoanCreationEvent, LoanTransferEvent, PropertyTransferEvent } from "common/events/types";
 import { createLoanFromQuote } from "common/loan";
+import { PayBankReason } from "common/events/types";
+import { PayBankEvent } from "common/events/types";
 
 export class PlayerBase {
     protected state: PlayerState;
     protected game!: IGame;
     constructor(
-        private config: RuntimeConfig, 
-        private propertyStore: IPropertyStore,
-        private loanStore: ILoanStore,
-        private playerStore: IPlayerStore,
-        public decisionMaker: IDecisionMaker, 
+        protected config: RuntimeConfig, 
+        protected propertyStore: IPropertyStore,
+        protected loanStore: ILoanStore,
+        protected playerStore: IPlayerStore,
+        protected decisionMaker: IDecisionMaker, 
         public readonly riskiness: number,
         private _id: PlayerId, 
         ) {
@@ -45,6 +47,18 @@ export class PlayerBase {
     }
     public get cashOnHand(): number {
         return this.state.cashOnHand;
+    }
+    public get getOutOfJailFreeCards(): number {
+        return this.state.getOutOfJailFreeCards;
+    }
+    public get properties(): Set<number> {
+        return this.state.properties
+    }
+    public get creditLoans(): Set<LoanId> {
+        return this.state.creditLoans
+    }
+    public get debtLoans(): Set<LoanId> {
+        return this.state.debtLoans
     }
     setMostRecentRoll(roll: [number, number]): void {
         this.state.mostRecentRoll = roll
@@ -84,6 +98,13 @@ export class PlayerBase {
     removeProperty(id: number): void {
         this.state.properties.delete(id)
     }
+    async handleFinanceOption(amount: number, reason: string): Promise<void> {
+        const loanQuote = await this.decisionMaker.decideHowToFinancePayment(amount, reason);
+        if(!loanQuote) {
+            return;
+        }
+        this.game.createLoan(loanQuote);
+    }
     purchaseProperty(quote: PropertyQuote): void {
         if(quote.for!==this.id) {
             throw new Error(`Cannot purchase ${quote.propertyId} when the quote is not for you`)
@@ -96,12 +117,14 @@ export class PlayerBase {
             propertyId: quote.propertyId,
             propertyType: quote.propertyType
         }
-        this.game!.processEvent(event)
+        this.game.processEvent(event)
     };
     sellProperty(quote: PropertyQuote): void {
         if(quote.owner!==this.id) {
             throw new Error(`Cannot sell ${quote.propertyId} when you don't own it`)
         }
+        // TODO: sell improvements to property and other properties of the same color to the bank if necessary
+
         const event: Omit<PropertyTransferEvent, "turn"|"order"> = {
             type: EventType.PropertyTransfer,
             amount: quote.offer,
@@ -110,7 +133,7 @@ export class PlayerBase {
             propertyId: quote.propertyId,
             propertyType: quote.propertyType
         }
-        this.game!.processEvent(event)
+        this.game.processEvent(event)
 
     }
     takeOutLoan(quote: LoanQuote): void {
@@ -150,6 +173,7 @@ export class PlayerBase {
     }
     public recalculateValues(): void {
         this.recalculateCreditRating();
+        this.recalculateCreditRatingLendingThreshold();
         this.recalculateNetWorth();
     }
     public getTotalAssetValue(): number {
@@ -161,11 +185,7 @@ export class PlayerBase {
         this.state.creditLoans.forEach(id => {
             const loan = this.loanStore.get(id);
             const loanFaceValue = loan.getFaceValue();
-            const debtor = this.playerStore.get(loan.debtor);
-            const debtorCreditRating = debtor.creditRating;
-            const multiplier = this.config.credit.ratingMultiplierOnDebtAssetValue[debtorCreditRating];
-            const loanValue = multiplier * loanFaceValue;
-            value += loanValue;
+            value += loanFaceValue;
         })
         return value;
     }
@@ -215,4 +235,57 @@ export class PlayerBase {
     async decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean> {
         return this.decisionMaker.decideToAcceptPropertyQuote(quote);
     }
+    payCashToBank(amount: number, reason: PayBankReason) {
+        const event: Omit<PayBankEvent, "turn"|"order"> = {
+            type: EventType.PayBank,
+            reason,
+            player: this.id,
+            amount,
+        }
+        this.game.processEvent(event)
+    }
+    async decideToUseGetOutOfJailFreeCard(): Promise<boolean> {
+        return this.decisionMaker.decideToUseGetOutOfJailFreeCard()
+    }
+    async decideToPayToGetOutOfJail(): Promise<boolean> {
+        return this.decisionMaker.decideToPayToGetOutOfJail()
+    }
+    async decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean> {
+       return this.decisionMaker.decideToAcceptTransferLoanQuote(quote)
+    }
+    async getTransferLoanOffersFromOtherPlayers(loanId:LoanId, price: number): Promise<TransferLoanQuote[]> {
+        const players = this.game.state.playerTurnOrder.map(playerId => this.game.state.playerStore.get(playerId));
+        const loan = this.game.state.loanStore.get(loanId);
+        const quotes: TransferLoanQuote[] = [];
+        for await (const player of players) {
+            const quote: TransferLoanQuote = {
+                amount: loan.getCurrentBalance(),
+                creditor: loan.creditor,
+                debtor: loan.debtor,
+                loanId,
+                rate: loan.rate,
+                rateType: loan.rateType,
+                term: loan.term,
+                offer: price, 
+                for: player.id
+            }
+            const wouldAccept = await player.decideToAcceptTransferLoanQuote(quote);
+            if(wouldAccept) {
+                quotes.push(quote)
+            }
+        }
+        return quotes;
+        
+    }
+    sellLoan(quote: TransferLoanQuote): void {
+        const transferLoanEvent: Omit<LoanTransferEvent, "turn"|"order"> = {
+            amount: quote.offer,
+            loanId: quote.loanId,
+            newCreditor: quote.for,
+            originalCreditor: quote.creditor,
+            type: EventType.LoanTransfer
+        }
+        this.game.processEvent(transferLoanEvent)
+    }
+    
 }

@@ -2,8 +2,10 @@ import crypto from "crypto";
 import { IPlayer } from "common/player/types";
 import { RuntimeConfig } from "common/config/types";
 import { EventBus } from "common/events/bus";
-import { CompletePlayerTurnEvent, CompleteTurnEvent, EventType, GameEvent, RollEvent } from "common/events/types";
+import { CompletePlayerTurnEvent, CompleteTurnEvent, EventType, GameEvent, LoanCreationEvent, RollEvent } from "common/events/types";
 import { PlayerId } from "common/state/types";
+import { createLoanFromQuote } from "common/loan";
+import { LoanQuote } from "common/loan/types";
 import { IGame } from "./types";
 
 export class Game implements IGame {
@@ -29,6 +31,15 @@ export class Game implements IGame {
             crypto.randomInt(1,7),
             crypto.randomInt(1,7)
         ]
+    }
+    createLoan(quote: LoanQuote) {
+        const event: LoanCreationEvent  = {
+            loan: createLoanFromQuote(quote),
+            order: this.state.currentPlayerTurn,
+            turn: this.state.turn,
+            type: EventType.LoanCreation
+        }
+        this.processEvent(event)
     }
     private roll(player: PlayerId) {
         const roll = this.getRoll();
@@ -65,6 +76,7 @@ export class Game implements IGame {
         }
         this.roll(player.id);
         await player.takeTurn();
+        player.recalculateValues()
         const endPlayerTurnEvent: CompletePlayerTurnEvent = {
             type: EventType.CompletePlayerTurn,
             order: this.currentPlayerTurn,

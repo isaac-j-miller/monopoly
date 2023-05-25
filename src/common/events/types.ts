@@ -12,6 +12,7 @@ export enum EventType {
     LoanChangeInterestRate,
     PropertyTransfer,
     PropertyUpgrade,
+    PropertyDowngrade,
     PlayerDeclareBankruptcy,
     CompleteTurn,
     CompletePlayerTurn,
@@ -24,7 +25,8 @@ export enum EventType {
     UseChanceCard,
     UseCommunityChestCard,
     LoanAccrueInterest,
-    Roll
+    Roll,
+    BankPayPlayer
 }
 
 export enum PayBankReason {
@@ -86,7 +88,10 @@ export interface LoanChangeInterestRateEvent extends Event<EventType.LoanChangeI
 export interface PropertyTransferEvent extends Event<EventType.PropertyTransfer>, TransferEvent, PropertyEvent {
 
 }
-export interface PropertyUpgradeEvent extends Event<EventType.PropertyUpgrade>, PropertyEvent {
+export interface PropertyUpgradeEvent extends Event<EventType.PropertyUpgrade>, Omit<PropertyEvent, "propertyType"> {
+    newLevel: PropertyLevel
+}
+export interface PropertyDowngradeEvent extends Event<EventType.PropertyDowngrade>, Omit<PropertyEvent, "propertyType"> {
     newLevel: PropertyLevel
 }
 export interface PlayerDeclareBankruptcyEvent extends Event<EventType.PlayerDeclareBankruptcy>, PlayerEvent {
@@ -135,6 +140,10 @@ export interface LoanAccrueInterestEvent extends Event<EventType.LoanAccrueInter
 
 }
 
+export interface BankPayPlayerEvent extends Event<EventType.BankPayPlayer>, PlayerEvent, Payment {
+    
+}
+
 export interface RollEvent extends Event<EventType.Roll>, PlayerEvent {
     roll: [number, number]
 }
@@ -148,6 +157,7 @@ export type EventTypeMap = {
     [EventType.PlayerMove]: PlayerMoveEvent;
     [EventType.PropertyTransfer]: PropertyTransferEvent;
     [EventType.PropertyUpgrade]: PropertyUpgradeEvent;
+    [EventType.PropertyDowngrade]: PropertyDowngradeEvent;
     [EventType.RentPayment]: RentPaymentEvent;
     [EventType.CompletePlayerTurn]: CompletePlayerTurnEvent;
     [EventType.CompleteTurn]: CompleteTurnEvent;
@@ -160,7 +170,8 @@ export type EventTypeMap = {
     [EventType.UseCommunityChestCard]: UseCommunityChestCardEvent;
     [EventType.PayBank]: PayBankEvent;
     [EventType.LoanAccrueInterest]: LoanAccrueInterestEvent;
-    [EventType.Roll]: RollEvent
+    [EventType.Roll]: RollEvent;
+    [EventType.BankPayPlayer]: BankPayPlayerEvent;
 }
 
 export type GameEvent = EventTypeMap[EventType];

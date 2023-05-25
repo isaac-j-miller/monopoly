@@ -1,9 +1,11 @@
 import { GameState, PlayerId } from "common/state/types";
-import { CompletePlayerTurnEvent, CompleteTurnEvent, DrawChanceCardEvent, DrawCommunityChestCardEvent, EventType, GameEvent, GetOutOfJailEvent, GoToJailEvent, LoanAccrueInterestEvent, LoanCreationEvent, LoanPaymentEvent, LoanChangeInterestRateEvent, LoanTransferEvent, PayBankEvent, PlayerDeclareBankruptcyEvent, PlayerMoveEvent, PlayerPayOffLoanEvent, PropertyTransferEvent, PropertyUpgradeEvent, RentPaymentEvent, UseChanceCardEvent, UseCommunityChestCardEvent, PayBankReason, GetOutOfJailReason, RollEvent } from "./types";
-import { assertIsDefined, assertNever } from "common/util";
-import { defaultRailroadQuantityRents, defaultUtilityQuantityRollMultipliers, getPropertyRealValue, getPropertyRent, getUpgradeCost } from "common/property/upgrades";
+import { CompletePlayerTurnEvent, CompleteTurnEvent, DrawChanceCardEvent, DrawCommunityChestCardEvent, EventType, GameEvent, GetOutOfJailEvent, GoToJailEvent, LoanAccrueInterestEvent, LoanCreationEvent, LoanPaymentEvent, LoanChangeInterestRateEvent, LoanTransferEvent, PayBankEvent, PlayerDeclareBankruptcyEvent, PlayerMoveEvent, PlayerPayOffLoanEvent, PropertyTransferEvent, PropertyUpgradeEvent, RentPaymentEvent, UseChanceCardEvent, UseCommunityChestCardEvent, PayBankReason, GetOutOfJailReason, RollEvent, PropertyDowngradeEvent, BankPayPlayerEvent } from "./types";
+import { assertNever } from "common/util";
+import { getPropertyRealValue, getPropertyRent, getUpgradeCost } from "common/property/upgrades";
 import { BoardPosition, PositionType } from "common/board/types";
+import { RuntimeConfig } from "common/config/types";
 import { Property } from "common/property/types";
+import { determineRentPaymentAmount } from "./util";
 
 type GameStateAndEventsObject = {
     initialState: GameState;
@@ -13,7 +15,7 @@ type GameStateAndEventsObject = {
 export class EventBus {
     private events: GameEvent[];
     private currentState: GameState;
-    constructor(private readonly initialState: GameState, events?: GameEvent[]) {
+    constructor(private config: RuntimeConfig, private readonly initialState: GameState, events?: GameEvent[]) {
         this.events = events ?? [];
         this.currentState = {...initialState};
     }
@@ -54,6 +56,8 @@ export class EventBus {
                 return this.processLoanTransfer(event);
             case EventType.PayBank:
                 return this.processPayBank(event);
+            case EventType.BankPayPlayer:
+                return this.processBankPayPlayer(event);
             case EventType.PlayerDeclareBankruptcy:
                 return this.processPlayerDeclareBankruptcy(event);
             case EventType.PlayerMove:
@@ -64,6 +68,8 @@ export class EventBus {
                 return this.processPropertyTransfer(event);
             case EventType.PropertyUpgrade:
                 return this.processPropertyUpgrade(event);
+            case EventType.PropertyDowngrade:
+                return this.processPropertyDowngrade(event);
             case EventType.RentPayment:
                 return this.processRentPayment(event);
             case EventType.UseChanceCard:
@@ -146,6 +152,10 @@ export class EventBus {
         const {player, amount} = event;
         this.currentState.playerStore.get(player).subtractCash(amount);
     }
+    private processBankPayPlayer(event: BankPayPlayerEvent) {
+        const {player, amount} = event;
+        this.currentState.playerStore.get(player).addCash(amount);
+    }
     private processPlayerLandedOn(playerId: PlayerId) {
         const player = this.currentState.playerStore.get(playerId);
         const {position} = player;
@@ -192,7 +202,6 @@ export class EventBus {
                     return 
                 }
                 if(owner.isBank) {
-                    // TODO: implement purchase or auction or whatever
                     return;
                 } 
                 const event: RentPaymentEvent = {
@@ -284,51 +293,29 @@ export class EventBus {
         property.realValue = getPropertyRealValue(property.basePrice, property.level);
         property.currentRent = getPropertyRent(property.baseRent, property.level);
     }
+    private processPropertyDowngrade(event: PropertyDowngradeEvent) {
+        const {propertyId, newLevel} = event;
+        const property = this.currentState.propertyStore.get(propertyId) as Property;
+        const valueChange = getUpgradeCost(property, newLevel);
+        const amount = valueChange * -2;
+        const bankPayPlayerEvent: BankPayPlayerEvent = {
+            type: EventType.BankPayPlayer,
+            amount,
+            order: event.order,
+            turn: event.turn,
+            player: property.owner
+        }
+        this.processEvent(bankPayPlayerEvent);
+        property.level = newLevel;
+        property.realValue = getPropertyRealValue(property.basePrice, property.level);
+        property.currentRent = getPropertyRent(property.baseRent, property.level);
+    }
     private processRentPayment(event: RentPaymentEvent) {
+        const paymentAmount = determineRentPaymentAmount(event, this.currentState);
         const {propertyId, player } = event;
         const property = this.currentState.propertyStore.get(propertyId);
         const renter = this.currentState.playerStore.get(player);
         const owner = this.currentState.playerStore.get(property.owner);
-        let paymentAmount: number | undefined;
-        switch(property.propertyType) {
-            case PositionType.Property: {
-                const othersOfColor = this.currentState.board.getAllPropertiesOfColor(property.color);
-                const ownerHasAllOfColor = othersOfColor.every(v=> {
-                    const p = this.currentState.propertyStore.get(v.propertyId);
-                    return p.owner === owner.id
-                });
-                const rent = property.currentRent;
-                paymentAmount = ownerHasAllOfColor ? (rent * 2) : rent;
-                break;
-            }
-            case PositionType.Utility:
-            case PositionType.Railroad: {
-                const allPropertiesOfType = this.currentState.board.getAllPositionsOfType(property.propertyType);
-                const allOfTypeOwnedBySameOwner = allPropertiesOfType.filter(v=> {
-                    const p = this.currentState.propertyStore.get(v.propertyId);
-                    return p.owner === owner.id
-                });
-                const numberOfTypeOwnedByOwner = allOfTypeOwnedBySameOwner.length;
-                switch(property.propertyType) {
-                    case PositionType.Utility: {
-                        const {mostRecentRoll} = renter;
-                        assertIsDefined(mostRecentRoll);
-                        const rollTotal = mostRecentRoll[0] + mostRecentRoll[1];
-                        paymentAmount = defaultUtilityQuantityRollMultipliers[numberOfTypeOwnedByOwner] * rollTotal
-                        break
-                    }
-                    case PositionType.Railroad: 
-                        paymentAmount = defaultRailroadQuantityRents[numberOfTypeOwnedByOwner];
-                        break
-                    default:
-                        assertNever(property)
-                }
-                break;
-            }
-            default:
-                assertNever(property);
-        }
-        assertIsDefined(paymentAmount);
         renter.subtractCash(paymentAmount);
         owner.addCash(paymentAmount);
     }
@@ -336,7 +323,7 @@ export class EventBus {
         const {player, reason} = event;
         if(reason === GetOutOfJailReason.Pay) {
             const payBankEvent: PayBankEvent = {
-                amount: 50,
+                amount: this.config.jail.getOfJailBaseCost,
                 order: event.order,
                 reason: PayBankReason.PayToGetOutOfJail,
                 player,
@@ -350,16 +337,16 @@ export class EventBus {
     private processPlayerDeclareBankruptcy(event: PlayerDeclareBankruptcyEvent) {
         throw new Error("Method not implemented.");
     }
-    private processUseChanceCard(event: UseChanceCardEvent) {
+    private processDrawChanceCard(event: DrawChanceCardEvent) {
         throw new Error("Method not implemented.");
     }
-    private processUseCommunityChestCard(event: UseCommunityChestCardEvent) {
+    private processUseChanceCard(event: UseChanceCardEvent) {
         throw new Error("Method not implemented.");
     }
     private processDrawCommunityChestCard(event: DrawCommunityChestCardEvent) {
         throw new Error("Method not implemented.");
     }
-    private processDrawChanceCard(event: DrawChanceCardEvent) {
+    private processUseCommunityChestCard(event: UseCommunityChestCardEvent) {
         throw new Error("Method not implemented.");
     }
     

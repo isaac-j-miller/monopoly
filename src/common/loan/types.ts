@@ -29,3 +29,8 @@ export type LoanQuote = {
     creditor: PlayerId;
     debtor: PlayerId;
 }
+export type TransferLoanQuote = LoanQuote & {
+    loanId: LoanId;
+    for: PlayerId;
+    offer: number;
+}

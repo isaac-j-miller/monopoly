@@ -24,7 +24,7 @@ interface PropertyBase {
 export interface Property extends PropertyBase {
     color: PropertyColor;
     level: PropertyLevel;
-    propertyType: PositionType.Property
+    propertyType: PositionType.Property;
     baseRent: number;
     currentRent: number;
 }
@@ -37,9 +37,9 @@ export interface Utility extends PropertyBase {
     propertyType: PositionType.Utility
 }
 
-export type GenericProperty = Property | Railroad | Utility
+export type GenericProperty = Property | Railroad | Utility;
 
 export type PropertyQuote = PropertyBase & {
-    offer: number
-    for: PlayerId
+    offer: number;
+    for: PlayerId;
 }

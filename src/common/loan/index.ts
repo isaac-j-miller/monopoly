@@ -28,10 +28,9 @@ export class Loan implements ILoan {
     }
     getFaceValue(): number {
         const normalPaymentAmount = this.getNominalPaymentAmount();
-        const numPaymentsApprox = Math.floor(this.totalPaid/normalPaymentAmount);
-        const remainingPayments = this.term - numPaymentsApprox;
-        const currentBalance = this.getCurrentBalance()
-        return remainingPayments*currentBalance*this.rate;
+        const numPaymentsMade = Math.floor(this.totalPaid/normalPaymentAmount);
+        const remainingPayments = this.term - numPaymentsMade;
+        return remainingPayments*normalPaymentAmount;
     }
     setCreditor(playerId: PlayerId): void {
         this._creditor = playerId
@@ -73,4 +72,12 @@ export function createLoanFromQuote(quote: LoanQuote): ILoan {
         quote.rate, 
         quote.amount, 
         quote.term)
+}
+
+export function getLoanQuoteFaceValue(quote: LoanQuote,): number {
+        return quote.amount*(quote.rate+1);
+}
+
+export function getInterestRateForLoanQuote(amount: number, desiredFaceValue: number): number {
+    return (desiredFaceValue/amount) -1;
 }
