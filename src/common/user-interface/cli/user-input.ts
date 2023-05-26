@@ -1,6 +1,8 @@
 import readline from "readline/promises";
 import { Writable } from "stream";
 import { IUserInput } from "../types";
+import { IPlayer } from "common/player/types";
+import { IGame } from "common/game/types";
 
 const booleanTransformer = (s: string): boolean => {
   const lower = s.toLocaleLowerCase();
@@ -26,6 +28,8 @@ export class CliUserInput implements IUserInput {
   private promptText?: string;
   private stream: Writable;
   private readline: readline.Interface;
+  private player!: IPlayer;
+  private game!: IGame;
   constructor() {
     this.stream = new Writable();
     this.stream.on("pipe", readable => {
@@ -36,6 +40,10 @@ export class CliUserInput implements IUserInput {
       input: process.stdin,
       output: this.stream,
     });
+  }
+  register(game: IGame, player: IPlayer) {
+    this.game = game;
+    this.player = player;
   }
   render(): string {
     // TODO: show more info

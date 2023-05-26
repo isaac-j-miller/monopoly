@@ -2,6 +2,7 @@ import { CreditRating } from "common/state/types";
 import { RuntimeConfig } from "./types";
 import { PropertyColor } from "common/board/types";
 import chalk from "chalk";
+import { PropertyLevel } from "common/property/types";
 
 export function getRuntimeConfig(): RuntimeConfig {
   const config: RuntimeConfig = {
@@ -9,6 +10,7 @@ export function getRuntimeConfig(): RuntimeConfig {
       startingInterestRate: 0.05,
       startingMoney: 10000,
       riskiness: 0,
+      emoji: "🏦",
     },
     credit: {
       ratingMultiplierOnDebtAssetValue: {
@@ -57,13 +59,14 @@ export function getRuntimeConfig(): RuntimeConfig {
         position: 0,
         properties: new Set(),
       },
+      emojiPool: ["👨", "🤖", "🎃", "👻", "😈", "🧚‍♀️", "👽", "🤠", "🤡", "🤑"],
     },
     turnLimit: 500,
     cli: {
       board: {
-        cornerPositionSize: 26,
-        nonCornerPositionHeight: 26,
-        nonCornerPositionWidth: 26,
+        cornerPositionSize: 15,
+        nonCornerPositionHeight: 15,
+        nonCornerPositionWidth: 15,
         colors: {
           [PropertyColor.Blue]: chalk.blue,
           [PropertyColor.Brown]: chalk.hex("#964B00"),
@@ -74,6 +77,15 @@ export function getRuntimeConfig(): RuntimeConfig {
           [PropertyColor.Red]: chalk.red,
           [PropertyColor.Yellow]: chalk.yellow,
         },
+      },
+      levels: {
+        [PropertyLevel.Unimproved]: "🚧",
+        [PropertyLevel.OneHouse]: "🏠",
+        [PropertyLevel.TwoHouses]: "🏠🏠",
+        [PropertyLevel.ThreeHouses]: "🏠🏠🏠",
+        [PropertyLevel.FourHouses]: "🏠🏠🏠🏠",
+        [PropertyLevel.Hotel]: "🏨",
+        [PropertyLevel.Skyscraper]: "🏢",
       },
     },
   };

@@ -6,6 +6,7 @@ import type { CreditRating, PlayerId } from "common/state/types";
 
 export interface IPlayer {
   readonly id: PlayerId;
+  readonly emoji: string;
   readonly isBank: boolean;
   readonly creditRating: CreditRating;
   readonly inJail: boolean;

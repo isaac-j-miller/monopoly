@@ -3,7 +3,7 @@ import { defaultBoard } from "common/board/default-board";
 import { getRuntimeConfig } from "common/config";
 import { BankDecisionMaker } from "common/decision-maker/bank";
 import { ComputerDecisionMaker } from "common/decision-maker/computer";
-import { CliHumanDecisionMaker } from "common/decision-maker/human";
+import { CliHumanDecisionMaker } from "common/decision-maker/cli-human";
 import { EventBus } from "common/events/bus";
 import { Game } from "common/game";
 import { Bank } from "common/player/bank";
@@ -25,7 +25,7 @@ export async function startMonopolyGame() {
   const playerStore = new PlayerStore([]);
   const userInput = new CliUserInput();
   const display = new CliDisplay(userInput, config);
-  const humanDecisionMaker = new CliHumanDecisionMaker(config, display);
+  const humanDecisionMaker = new CliHumanDecisionMaker(config, userInput);
   const humanPlayer = new Player(
     config,
     propertyStore,
@@ -33,7 +33,8 @@ export async function startMonopolyGame() {
     playerStore,
     humanDecisionMaker,
     getRiskyness(),
-    "Player_0"
+    "Player_0",
+    config.players.emojiPool[0]
   );
   const bankDecisionMaker = new BankDecisionMaker(config);
   const bankPlayer = new Bank(
@@ -43,7 +44,8 @@ export async function startMonopolyGame() {
     playerStore,
     bankDecisionMaker,
     getRiskyness(),
-    "Bank_0"
+    "Bank_0",
+    config.bank.emoji
   );
   const remainingPlayersCount = config.players.count - 1;
   const computerPlayers: IPlayer[] = [];
@@ -56,7 +58,8 @@ export async function startMonopolyGame() {
       playerStore,
       computerDecisionMaker,
       getRiskyness(),
-      `Player_${i}`
+      `Player_${i}`,
+      config.players.emojiPool[i + 1]
     );
     computerPlayers.push(player);
   }
@@ -64,7 +67,7 @@ export async function startMonopolyGame() {
   players.forEach(player => playerStore.add(player));
   const initialState: GameState = {
     playerStore: playerStore,
-    playerTurnOrder: [],
+    playerTurnOrder: players.map(p => p.id),
     turn: 0,
     currentPlayerTurn: 0,
     communityChestCards: [],
@@ -76,6 +79,11 @@ export async function startMonopolyGame() {
   const bus = new EventBus(config, initialState, []);
   const game = new Game(config, bus, display);
   display.register(game);
+  userInput.register(game, humanPlayer);
+  //   console.log("starting game")
   await display.update();
-  await game.start();
+  return;
+  //   await game.start();
 }
+
+void startMonopolyGame();

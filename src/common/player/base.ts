@@ -25,7 +25,8 @@ export class PlayerBase {
     protected playerStore: IPlayerStore,
     protected decisionMaker: IDecisionMaker,
     public readonly riskiness: number,
-    private _id: PlayerId
+    private _id: PlayerId,
+    public readonly emoji: string
   ) {
     this.state = config.players.initialState;
   }

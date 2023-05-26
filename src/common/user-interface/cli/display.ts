@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { IGame } from "common/game/types";
 import { RuntimeConfig } from "common/config/types";
 import { IDisplay, IUserInput } from "../types";
@@ -15,9 +16,11 @@ export class CliDisplay implements IDisplay {
     const width = this.board.boardConfig.totalHeightWidth;
     const border = "=".repeat(width);
     console.clear();
-    console.log(board);
-    console.log(border);
-    console.log(userInput);
+    board.forEach(line => {
+      console.log(line);
+    });
+    // console.log(border);
+    // console.log(userInput);
   }
   register(game: IGame): void {
     this.game = game;

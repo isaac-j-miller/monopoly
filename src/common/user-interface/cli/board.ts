@@ -1,7 +1,11 @@
+import chalk, { Chalk } from "chalk";
+import stringLength from "string-width";
 import { BoardPosition, PositionType } from "common/board/types";
 import { RuntimeConfig } from "common/config/types";
 import { IGame } from "common/game/types";
 import { assertNever } from "common/util";
+import { Property } from "common/property/types";
+import { IPlayer } from "common/player/types";
 
 type BoardConfig = {
   totalHeightWidth: number;
@@ -12,8 +16,9 @@ type BoardConfig = {
 
 const UTFChars = {
   solidBlock: "█",
-  leftVerticalLine: "⎹",
-  rightVerticalLine: "⎸",
+  space: " ",
+  leftVerticalLine: "|",
+  rightVerticalLine: "|",
   middleVerticalLine: "|",
   topHorizontalLine: "▁",
   middleHorizontalLine: "—",
@@ -22,38 +27,79 @@ const UTFChars = {
 function getBlankBox(height: number, width: number): string[] {
   const rows: string[] = [];
   for (let i = 0; i < height; i++) {
-    rows.push(" ".repeat(width));
+    rows.push(chalk.black(UTFChars.space.repeat(width)));
   }
   return rows;
 }
 function getLeftRightBorderBox(height: number, width: number): string[] {
   const rows: string[] = [];
   for (let i = 0; i < height; i++) {
-    rows.push(UTFChars.leftVerticalLine + " ".repeat(width - 2) + UTFChars.rightVerticalLine);
+    rows.push(
+      UTFChars.leftVerticalLine + UTFChars.space.repeat(width - 2) + UTFChars.rightVerticalLine
+    );
   }
   return rows;
 }
-function centerText(text: string, width: number): string {
-  const extraWidth = width - text.length;
+function centerText(text: string, width: number, color?: Chalk): string {
+  const len = stringLength(text);
+  const extraWidth = width - len;
   const onEachSide = extraWidth / 2;
   const leftSpacing = Math.floor(onEachSide);
   const rightSpacing = Math.ceil(onEachSide);
-  return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
+  return (
+    UTFChars.space.repeat(leftSpacing) +
+    (color ? color(text) : text) +
+    UTFChars.space.repeat(rightSpacing)
+  );
 }
-function padTextLeftRight(text: string, width: number): string {
-  if (text.length + 2 > width) {
-    // TODO: wrap text
-    throw new Error("text too long");
+
+function padTextLeftRight(text: string, width: number, color?: Chalk): string[] {
+  const len = stringLength(text);
+  let lines: string[] = [];
+  const maxWidth = width - 2;
+  if (len > maxWidth) {
+    const split = text.split(" ");
+    if (split.some(s => stringLength(s) > maxWidth)) {
+      throw new Error(`text too long: '${text}' has length ${len}, which > ${maxWidth}`);
+    }
+    let currentLine = "";
+    split.forEach(line => {
+      const proposed = (currentLine ? currentLine + " " : "") + line;
+      const proposedLength = stringLength(proposed);
+      if (proposedLength <= maxWidth) {
+        currentLine = proposed;
+      } else {
+        lines.push(currentLine);
+        currentLine = line;
+      }
+    });
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  } else {
+    lines = [text];
   }
-  const left = UTFChars.leftVerticalLine;
-  const right = UTFChars.rightVerticalLine;
-  const centered = centerText(text, width - 2);
-  return left + centered + right;
+  const left = chalk.reset(UTFChars.leftVerticalLine);
+  const right = chalk.reset(UTFChars.rightVerticalLine);
+  const linesOut = lines.map(line => chalk(left + centerText(line, maxWidth, color) + right));
+  return linesOut;
 }
+
+function replaceLinesFromEnd(arr: string[], newLines: string[], end: number) {
+  const start = arr.length - (end + newLines.length);
+  replaceLinesFromStart(arr, newLines, start);
+}
+
+function replaceLinesFromStart(arr: string[], newLines: string[], start: number) {
+  newLines.forEach((line, i) => {
+    arr[i + start] = line;
+  });
+}
+
 export class CliBoardDisplay {
   private game!: IGame;
   public boardConfig!: BoardConfig;
-  private boardBase!: string;
+  private boardBase!: string[];
   constructor(private config: RuntimeConfig) {}
   private getLeftSidePosition(position: BoardPosition<PositionType>): string[] {
     // main x/y: w/h; buffer x/y: c - w/h
@@ -75,7 +121,21 @@ export class CliBoardDisplay {
     const bottomSpacing = getBlankBox(bufferBottomHeight, width);
     const remainingLines = height - 2;
     const fillerLines = getLeftRightBorderBox(remainingLines, width);
-    fillerLines[2] = padTextLeftRight(position.name, width);
+    const nameLines = padTextLeftRight(position.name, width);
+    const playersAtPosition: IPlayer[] = [];
+    const playerEmojis: string[] = [];
+    this.game.state.playerTurnOrder.forEach(playerId => {
+      const player = this.game.state.playerStore.get(playerId);
+      if (player.isBank) {
+        return;
+      }
+      if (player.position === position.position) {
+        playersAtPosition.push(player);
+        playerEmojis.push(player.emoji);
+      }
+    });
+    replaceLinesFromEnd(fillerLines, padTextLeftRight(playerEmojis.join(" "), width), 5);
+    replaceLinesFromStart(fillerLines, nameLines, 3);
     switch (position.type) {
       case PositionType.Blank:
       case PositionType.Chance:
@@ -85,35 +145,89 @@ export class CliBoardDisplay {
         break;
       case PositionType.Property: {
         const asProperty = position as BoardPosition<PositionType.Property>;
+        const p = this.game.state.propertyStore.get(asProperty.propertyId) as Property;
         const color = this.config.cli.board.colors[asProperty.color];
-        const header = padTextLeftRight(color(UTFChars.solidBlock.repeat(width - 2)), width);
-        fillerLines[0] = header;
+        const header = padTextLeftRight(UTFChars.solidBlock.repeat(width - 2), width, color);
+        replaceLinesFromStart(fillerLines, header, 0);
+        replaceLinesFromStart(fillerLines, header, 1);
+        replaceLinesFromStart(
+          fillerLines,
+          padTextLeftRight(this.config.cli.levels[p.level], width),
+          2
+        );
         // TODO: display improvements?
-        fillerLines[remainingLines - 2] = `Price: $${asProperty.basePrice}`;
+        replaceLinesFromEnd(
+          fillerLines,
+          padTextLeftRight(`Price: $${asProperty.basePrice}`, width),
+          2
+        );
+        if (!p.owner.startsWith("Bank_")) {
+          const ownedBy = padTextLeftRight(`Owned by: ${p.owner}`, width);
+          replaceLinesFromEnd(fillerLines, ownedBy, 0);
+        }
         break;
       }
       case PositionType.Railroad: {
         const asRailroad = position as BoardPosition<PositionType.Railroad>;
-        fillerLines[4] = padTextLeftRight("🚆", width);
-        fillerLines[remainingLines - 2] = `Price: $${asRailroad.basePrice}`;
+        const p = this.game.state.propertyStore.get(asRailroad.propertyId);
+        replaceLinesFromStart(fillerLines, padTextLeftRight("🚆", width), 5);
+        replaceLinesFromEnd(
+          fillerLines,
+          padTextLeftRight(`Price: $${asRailroad.basePrice}`, width),
+          2
+        );
+        if (!p.owner.startsWith("Bank_")) {
+          const ownedBy = padTextLeftRight(`Owned by: ${p.owner}`, width);
+          replaceLinesFromEnd(fillerLines, ownedBy, 0);
+        }
         break;
       }
       case PositionType.Tax: {
         const asTax = position as BoardPosition<PositionType.Tax>;
-        fillerLines[4] = padTextLeftRight(asTax.icon, width);
-        fillerLines[remainingLines - 2] = `Pay ${asTax.baseAmount}`;
+        replaceLinesFromStart(fillerLines, padTextLeftRight(asTax.icon, width), 5);
+        replaceLinesFromEnd(fillerLines, padTextLeftRight(`Pay ${asTax.baseAmount}`, width), 2);
         break;
       }
       case PositionType.Utility: {
         const asUtility = position as BoardPosition<PositionType.Utility>;
-        fillerLines[4] = padTextLeftRight(asUtility.icon, width);
-        fillerLines[remainingLines - 2] = `Price: $${asUtility.basePrice}`;
+        const p = this.game.state.propertyStore.get(asUtility.propertyId);
+        replaceLinesFromStart(fillerLines, padTextLeftRight(asUtility.icon, width), 5);
+        replaceLinesFromEnd(
+          fillerLines,
+          padTextLeftRight(`Price: $${asUtility.basePrice}`, width),
+          2
+        );
+        if (!p.owner.startsWith("Bank_")) {
+          const ownedBy = padTextLeftRight(`Owned by: ${p.owner}`, width);
+          replaceLinesFromEnd(fillerLines, ownedBy, 0);
+        }
         break;
       }
       default:
         assertNever(position.type);
     }
     const lines = [top, ...fillerLines, bottom, ...bottomSpacing];
+    const heightIsCorrect = lines.length === height;
+    if (!heightIsCorrect) {
+      throw new Error(
+        `height is incorrect for position ${position.position} (${position.name}): expected ${height}, got ${lines.length}`
+      );
+    }
+    const widthIsCorrect = lines.every(l => stringLength(l) === width);
+    if (!widthIsCorrect) {
+      const msgs: string[] = [];
+      lines.forEach((line, i) => {
+        const strLen = stringLength(line);
+        if (strLen !== width) {
+          msgs.push(`line ${i}: has length ${strLen}. value: '${line}'`);
+        }
+      });
+      throw new Error(
+        `width is incorrect for position ${position.position} (${
+          position.name
+        }): expected ${width}, got ${msgs.join(",\n")}`
+      );
+    }
     return lines;
   }
   private getBottomSidePosition(position: BoardPosition<PositionType>): string[] {
@@ -127,7 +241,21 @@ export class CliBoardDisplay {
     const bottom = UTFChars.bottomHorizontalLine.repeat(size);
     const remainingLines = size - 2;
     const fillerLines = getLeftRightBorderBox(remainingLines, size);
-    fillerLines[2] = padTextLeftRight(position.name, size);
+    const nameLines = padTextLeftRight(position.name, size);
+    const playersAtPosition: IPlayer[] = [];
+    const playerEmojis: string[] = [];
+    this.game.state.playerTurnOrder.forEach(playerId => {
+      const player = this.game.state.playerStore.get(playerId);
+      if (player.isBank) {
+        return;
+      }
+      if (player.position === position.position) {
+        playersAtPosition.push(player);
+        playerEmojis.push(player.emoji);
+      }
+    });
+    replaceLinesFromEnd(fillerLines, padTextLeftRight(playerEmojis.join(" "), size), 5);
+    replaceLinesFromStart(fillerLines, nameLines, 2);
     switch (position.type) {
       case PositionType.Blank:
       case PositionType.GoToJail:
@@ -199,8 +327,8 @@ export class CliBoardDisplay {
   }
   private mergeRendersIntoNewlineRows(rows: string[][][]): string[] {
     const singleCharacterRows: string[] = [];
-    for (let i = 0; i < this.boardConfig.totalHeightWidth; i++) {
-      singleCharacterRows[i] = " ".repeat(this.boardConfig.totalHeightWidth);
+    for (let i = 0; i <= this.boardConfig.totalHeightWidth; i++) {
+      singleCharacterRows[i] = "";
     }
     const topOrBottomRowHeight = this.config.cli.board.cornerPositionSize;
     const middleRowHeight = this.config.cli.board.nonCornerPositionWidth;
@@ -208,41 +336,31 @@ export class CliBoardDisplay {
       if (i === 0) {
         return 0;
       }
-      if (i === 1) {
-        return topOrBottomRowHeight;
-      }
       return topOrBottomRowHeight + (i - 1) * middleRowHeight;
     };
     rows.forEach((row, i) => {
       const rowBaseline = getBaseline(i);
       row.forEach((position, j) => {
-        const columnBaseline = getBaseline(j);
         position.forEach((line, k) => {
-          Array.from(line).forEach((char, z) => {
-            const rowIndex = rowBaseline + k;
-            const columnIndex = columnBaseline + z;
-            singleCharacterRows[rowIndex] = [
-              ...singleCharacterRows[rowIndex].slice(0, columnIndex),
-              char,
-              ...singleCharacterRows[rowIndex].slice(columnIndex + 1),
-            ].join("");
-          });
+          const rowIndex = rowBaseline + k;
+          singleCharacterRows[rowIndex] += line;
         });
       });
     });
     return singleCharacterRows;
   }
-  getBoardBase(): string {
+  getBoardBase(): string[] {
     const {
       boardConfig,
       game: {
         state: { board },
       },
     } = this;
+    const length = board.positions.length;
     const sideLength = length / 4;
-    const leftSideRange: [number, number] = [1, sideLength - 1];
+    const leftSideRange: [number, number] = [1, sideLength - 2];
     const topRowRange: [number, number] = [sideLength, sideLength * 2];
-    const rightSideRange: [number, number] = [sideLength * 2, sideLength * 3];
+    const rightSideRange: [number, number] = [sideLength * 2 + 1, sideLength * 3];
     const bottomRowRange: [number, number] = [sideLength * 3, sideLength * 4];
     const topRowPositions = board.positions.slice(topRowRange[0], topRowRange[1] + 1);
     const bottomRowPositions = [
@@ -262,18 +380,23 @@ export class CliBoardDisplay {
       middleRowRenders.push(row);
     }
     const renders = [topRowRenders, ...middleRowRenders, bottomRowRenders];
+    // renders.forEach(r=>{
+    //     r.forEach(pos=>{
+    //         console.log(pos.join("\n"))
+    //     })
+    // })
     const merged = this.mergeRendersIntoNewlineRows(renders);
-    const screen = merged.join("\n");
-    return screen;
+    return merged;
   }
   register(game: IGame) {
     this.game = game;
     this.boardConfig = this.getBoardConfig();
     this.boardBase = this.getBoardBase();
   }
-  render(): string {
+  render(): string[] {
     const base = this.boardBase;
     // TODO: add property upgrades, player positions;
-    return base;
+    return base.map(x => chalk.visible(x));
+    // return []
   }
 }
