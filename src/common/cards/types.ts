@@ -1,12 +1,11 @@
-
 export interface DrawableCard {
-    name: string;
+  name: string;
 }
 
 export interface ChanceCard {
-    // TODO: implement
+  // TODO: implement
 }
 
 export interface CommunityChestCard {
-    // TODO: implement
+  // TODO: implement
 }

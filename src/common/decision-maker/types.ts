@@ -5,15 +5,18 @@ import { PropertyQuote } from "common/property/types";
 import { PlayerId } from "common/state/types";
 
 export interface IDecisionMaker {
-    decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>;
-    decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean>;
-    getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote|null>
-    getPurchasePropertyQuoteForPlayer(playerId: PlayerId, propertyId: number): Promise<PropertyQuote|null>;
-    decideToBuyPropertyFromBank(): Promise<boolean>;
-    decideToUseGetOutOfJailFreeCard(): Promise<boolean>;
-    decideToPayToGetOutOfJail(): Promise<boolean>;
-    decideHowToFinancePayment(amount: number, reason: string): Promise<LoanQuote|null>;
-    coverCashOnHandShortfall(): Promise<void>;
-    doOptionalActions(): Promise<void>;
-    register(game: IGame, player: IPlayer): void;
+  decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>;
+  decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean>;
+  getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null>;
+  getPurchasePropertyQuoteForPlayer(
+    playerId: PlayerId,
+    propertyId: number
+  ): Promise<PropertyQuote | null>;
+  decideToBuyPropertyFromBank(): Promise<boolean>;
+  decideToUseGetOutOfJailFreeCard(): Promise<boolean>;
+  decideToPayToGetOutOfJail(): Promise<boolean>;
+  decideHowToFinancePayment(amount: number, reason: string): Promise<LoanQuote | null>;
+  coverCashOnHandShortfall(): Promise<void>;
+  doOptionalActions(): Promise<void>;
+  register(game: IGame, player: IPlayer): void;
 }

@@ -1,5 +1,3 @@
 import { ChanceCard } from "./types";
 
-export const chanceCards: ChanceCard[] = [
-    
-]
+export const chanceCards: ChanceCard[] = [];

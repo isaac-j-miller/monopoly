@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prettier": "./node_modules/.bin/prettier --write .",
+    "prettier-check": "./node_modules/.bin/prettier  --check ."
   },
   "keywords": [],
   "author": "",
@@ -15,5 +16,8 @@
     "eslint": "^8.40.0",
     "prettier": "^2.8.8",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2"
   }
 }

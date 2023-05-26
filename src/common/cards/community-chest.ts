@@ -1,5 +1,3 @@
 import { CommunityChestCard } from "./types";
 
-export const communityChestCards: CommunityChestCard[] = [
-    
-]
+export const communityChestCards: CommunityChestCard[] = [];
