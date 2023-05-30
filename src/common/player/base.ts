@@ -1,6 +1,6 @@
 import type { IDecisionMaker } from "common/decision-maker/types";
 import { CreditRating, PlayerId, PlayerState } from "common/state/types";
-import type { RuntimeConfig } from "common/config/types";
+import type { HumanOrComputerPlayerType, RuntimeConfig } from "common/config/types";
 import type { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
 import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { IGame } from "common/game/types";
@@ -26,7 +26,8 @@ export class PlayerBase {
     protected decisionMaker: IDecisionMaker,
     public readonly riskiness: number,
     private _id: PlayerId,
-    public readonly emoji: string
+    public readonly emoji: string,
+    public readonly type: HumanOrComputerPlayerType
   ) {
     this.state = config.players.initialState;
   }

@@ -14,10 +14,15 @@ import { PlayerId } from "common/state/types";
 import { createLoanFromQuote } from "common/loan";
 import { IDisplay } from "common/user-interface/types";
 import { LoanQuote } from "common/loan/types";
-import { IGame } from "./types";
+import { GameConfig, IGame } from "./types";
 
 export class Game implements IGame {
-  constructor(private config: RuntimeConfig, private bus: EventBus, private display: IDisplay) {}
+  constructor(
+    private config: RuntimeConfig,
+    private bus: EventBus,
+    private display: IDisplay,
+    readonly gameConfig: GameConfig
+  ) {}
   public get turn() {
     return this.bus.state.turn;
   }
@@ -32,6 +37,18 @@ export class Game implements IGame {
   }
   private getRoll(): [number, number] {
     return [crypto.randomInt(1, 7), crypto.randomInt(1, 7)];
+  }
+  isReady(): boolean {
+    // TODO: determine if number of players is equal to config number of players
+    return true;
+  }
+  addPlayer(player: IPlayer): void {
+    this.state.playerStore.add(player);
+    this.players.push(player);
+    if (this.state.playerTurnOrder.includes(player.id)) {
+      return;
+    }
+    this.state.playerTurnOrder.push(player.id);
   }
   createLoan(quote: LoanQuote) {
     const event: LoanCreationEvent = {

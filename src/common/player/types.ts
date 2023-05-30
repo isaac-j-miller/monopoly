@@ -1,3 +1,4 @@
+import { HumanOrComputerPlayerType } from "common/config/types";
 import { PayBankReason } from "common/events/types";
 import { IGame } from "common/game/types";
 import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
@@ -6,6 +7,7 @@ import type { CreditRating, PlayerId } from "common/state/types";
 
 export interface IPlayer {
   readonly id: PlayerId;
+  readonly type: HumanOrComputerPlayerType;
   readonly emoji: string;
   readonly isBank: boolean;
   readonly creditRating: CreditRating;

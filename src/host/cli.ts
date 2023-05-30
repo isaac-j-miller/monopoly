@@ -16,6 +16,7 @@ import { PropertyStore } from "common/store/property-store";
 import { CliDisplay } from "common/user-interface/cli/display";
 import { CliUserInput } from "common/user-interface/cli/user-input";
 import { getRiskyness } from "common/util";
+import { HumanOrComputerPlayerType } from "common/config/types";
 
 export async function startMonopolyGame() {
   const config = getRuntimeConfig();
@@ -34,7 +35,8 @@ export async function startMonopolyGame() {
     humanDecisionMaker,
     getRiskyness(),
     "Player_0",
-    config.players.emojiPool[0]
+    config.players.emojiPool[0],
+    HumanOrComputerPlayerType.Human
   );
   const bankDecisionMaker = new BankDecisionMaker(config);
   const bankPlayer = new Bank(
@@ -45,7 +47,8 @@ export async function startMonopolyGame() {
     bankDecisionMaker,
     getRiskyness(),
     "Bank_0",
-    config.bank.emoji
+    config.bank.emoji,
+    HumanOrComputerPlayerType.Computer
   );
   const remainingPlayersCount = config.players.count - 1;
   const computerPlayers: IPlayer[] = [];
@@ -59,7 +62,8 @@ export async function startMonopolyGame() {
       computerDecisionMaker,
       getRiskyness(),
       `Player_${i}`,
-      config.players.emojiPool[i + 1]
+      config.players.emojiPool[i + 1],
+      HumanOrComputerPlayerType.Computer
     );
     computerPlayers.push(player);
   }
@@ -77,7 +81,10 @@ export async function startMonopolyGame() {
     board,
   };
   const bus = new EventBus(config, initialState, []);
-  const game = new Game(config, bus, display);
+  const game = new Game(config, bus, display, {
+    gameId: "only",
+    initialState,
+  });
   display.register(game);
   userInput.register(game, humanPlayer);
   //   console.log("starting game")

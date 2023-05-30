@@ -1,7 +1,6 @@
-import { IBoard, PositionType, PropertyColor } from "common/board/types";
+import { IBoard } from "common/board/types";
 import { ChanceCard, CommunityChestCard } from "common/cards/types";
 import { LoanId } from "common/loan/types";
-import { IPlayer } from "common/player/types";
 import { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
 
 export enum InterestRateType {
