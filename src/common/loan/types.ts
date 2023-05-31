@@ -1,17 +1,20 @@
 import type { PlayerId, InterestRateType } from "common/state/types";
 
-export type LoanId = `Creditor:${PlayerId};Debtor:${PlayerId};${string}`;
+export type LoanId = string;
 
-export interface ILoan {
-  readonly id: LoanId;
-  readonly creditor: PlayerId;
-  readonly debtor: PlayerId;
-  readonly rateType: InterestRateType;
-  readonly rate: number;
-  readonly remainingPrincipal: number;
-  readonly remainingInterest: number;
+export type LoanState = {
+  id: LoanId;
+  creditor: PlayerId;
+  debtor: PlayerId;
+  rateType: InterestRateType;
+  rate: number;
+  remainingPrincipal: number;
+  remainingInterest: number;
   readonly initialPrincipal: number;
-  readonly term: number;
+  term: number;
+}
+
+export interface ILoan extends LoanState {
   setCreditor(playerId: PlayerId): void;
   setRate(rate: number): void;
   getCurrentBalance(): number;
@@ -19,6 +22,7 @@ export interface ILoan {
   makePayment(amount: number): number;
   accrueInterest(): void;
   getNominalPaymentAmount(): number;
+  toObject(): LoanState;
 }
 
 export type LoanQuote = {

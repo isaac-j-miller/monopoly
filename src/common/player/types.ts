@@ -3,7 +3,7 @@ import { PayBankReason } from "common/events/types";
 import { IGame } from "common/game/types";
 import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { PropertyLevel, PropertyQuote } from "common/property/types";
-import type { CreditRating, PlayerId } from "common/state/types";
+import type { CreditRating, PlayerId, PlayerState } from "common/state/types";
 
 export interface IPlayer {
   readonly id: PlayerId;
@@ -21,6 +21,7 @@ export interface IPlayer {
   readonly creditLoans: Set<LoanId>;
   readonly debtLoans: Set<LoanId>;
   readonly getOutOfJailFreeCards: number;
+  getState(): PlayerState;
   setMostRecentRoll(roll: [number, number]): void;
   setPosition(position: number): void;
   getOutOfJail(): void;

@@ -1,8 +1,8 @@
 import { Socket } from "socket.io";
 import { PlayerId } from "common/state/types";
+import { SerializedGamePlayer } from "common/shared/types";
 import { GameStore } from "./store";
 import { deserializeGamePlayerId } from "../serialization";
-import { SerializedGamePlayer } from "common/shared/types";
 
 export class GameSocket {
   readonly gameId: string;
@@ -21,5 +21,13 @@ export class GameSocket {
       this.gameStore.registerPlayer(this.gameId, this.playerId, this, "👨");
       console.log(`registered player ${this.playerId} with game ${this.gameId}`);
     }
+  }
+  disconnect() {
+    console.log(`Disconnecting socket id ${this.socket.id}`)
+    this.socket.disconnect(true);
+  }
+  onError(error: Error) {
+    console.error("Error setting up socket", error);
+    this.disconnect();
   }
 }

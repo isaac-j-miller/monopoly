@@ -6,8 +6,9 @@
   "scripts": {
     "run-cli": "clear && node --require ts-node/register --require tsconfig-paths/register ./src/host/cli.ts",
     "start": "node --require ts-node/register --require tsconfig-paths/register ./src/host/index.ts",
-    "prettier": "./node_modules/.bin/prettier --write .",
-    "prettier-check": "./node_modules/.bin/prettier  --check ."
+    "check-ts": "bash ./node_modules/.bin/tsc --noEmit",
+    "prettier": "bash ./node_modules/.bin/prettier --write .",
+    "prettier-check": "bash ./node_modules/.bin/prettier  --check ."
   },
   "keywords": [],
   "author": "",

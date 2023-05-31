@@ -1,77 +1,94 @@
-import { InterestRateType, PlayerId } from "common/state/types";
-import { ILoan, LoanId, LoanQuote } from "./types";
+import { PlayerId } from "common/state/types";
+import { ILoan, LoanQuote, LoanState } from "./types";
 import { getUniqueId } from "common/util";
 
 export class Loan implements ILoan {
   constructor(
-    readonly debtor: PlayerId,
-    private _creditor: PlayerId,
-    readonly rateType: InterestRateType,
-    private _rate: number,
-    readonly initialPrincipal: number,
-    readonly term: number
+    private state: LoanState
   ) {
-    this.remainingPrincipal = initialPrincipal;
-    this.remainingInterest = 0;
-    this.id = `Creditor:${_creditor};Debtor:${debtor};${getUniqueId()}`;
-    this.totalPaid = 0;
   }
-  readonly id: LoanId;
+  toObject(): LoanState {
+    return this.state;
+  }
+  get rateType() {
+    return this.state.rateType
+  }
+  get remainingPrincipal() {
+    return this.state.remainingPrincipal
+  }
+  get remainingInterest() {
+    return this.state.remainingInterest
+  }
+  get initialPrincipal() {
+    return this.state.initialPrincipal
+  }
+  get term() {
+    return this.state.term
+  }
+  get id() {
+    return this.state.id
+  }
   get rate(): number {
-    return this._rate;
+    return this.state.rate;
   }
-  private totalPaid: number;
-  remainingPrincipal: number;
-  remainingInterest: number;
   get creditor(): PlayerId {
-    return this._creditor;
+    return this.state.creditor;
   }
+  get debtor(): PlayerId {
+    return this.state.debtor
+  };
   getFaceValue(): number {
     const normalPaymentAmount = this.getNominalPaymentAmount();
-    const numPaymentsMade = Math.floor(this.totalPaid / normalPaymentAmount);
-    const remainingPayments = this.term - numPaymentsMade;
+    const remaining = this.getCurrentBalance();
+    const numPaymentsMade = Math.floor(remaining / normalPaymentAmount);
+    const remainingPayments = this.state.term - numPaymentsMade;
     return remainingPayments * normalPaymentAmount;
   }
   setCreditor(playerId: PlayerId): void {
-    this._creditor = playerId;
+    this.state.creditor = playerId;
   }
   setRate(rate: number): void {
-    this._rate = rate;
+    this.state.rate = rate;
   }
   getCurrentBalance(): number {
-    return this.remainingInterest + this.remainingPrincipal;
+    return this.state.remainingInterest + this.state.remainingPrincipal;
   }
   makePayment(amount: number): number {
-    if (amount > this.remainingInterest) {
-      const remainder = amount - this.remainingInterest;
-      this.remainingInterest = 0;
-      this.remainingPrincipal -= remainder;
+    if (amount > this.state.remainingInterest) {
+      const remainder = amount - this.state.remainingInterest;
+      this.state.remainingInterest = 0;
+      this.state.remainingPrincipal -= remainder;
     } else {
-      this.remainingInterest -= amount;
+      this.state.remainingInterest -= amount;
     }
-    this.totalPaid += amount;
     return this.getCurrentBalance();
   }
   accrueInterest(): number {
     const balance = this.getCurrentBalance();
     const interest = balance * this.rate;
-    this.remainingInterest += interest;
+    this.state.remainingInterest += interest;
     return this.getCurrentBalance();
   }
   getNominalPaymentAmount(): number {
-    const totalAmountDue = this.initialPrincipal + this.term * this.initialPrincipal * this.rate;
-    return totalAmountDue / this.term;
+    const totalAmountDue = this.state.initialPrincipal + this.state.term * this.state.initialPrincipal * this.rate;
+    return totalAmountDue / this.state.term;
   }
 }
 
 export function createLoanFromQuote(quote: LoanQuote): ILoan {
+  const {amount, creditor, debtor, rate, rateType,term} = quote
   return new Loan(
-    quote.debtor,
-    quote.creditor,
-    quote.rateType,
-    quote.rate,
-    quote.amount,
-    quote.term
+    {
+      id: getUniqueId(),
+      remainingPrincipal: amount,
+      initialPrincipal: amount, 
+      creditor,
+      debtor,
+      rate,
+      rateType,
+      term,
+      remainingInterest: 0,
+    }
   );
 }
 
