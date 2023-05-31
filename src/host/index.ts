@@ -1,8 +1,6 @@
-import path from "path";
 import http from "http";
-import fs from "fs";
 import { Server } from "socket.io";
-import express, { Request } from "express";
+import express from "express";
 import { getVite } from "./handlers/vite";
 import { handleGameSocketConnection } from "./handlers/socket/handler";
 import { GameStore } from "./handlers/socket/store";
@@ -26,14 +24,14 @@ const main = async () => {
   app.use(express.json());
   const getWebIndex = handlerWrapper(getWebIndexHandler(vite));
   app.get(["/", "/game/:id"], getWebIndex);
-  const getWebAssetHandler = handlerWrapper(getWebAsset(vite))
+  const getWebAssetHandler = handlerWrapper(getWebAsset(vite));
   app.get("/assets/:asset(*)", getWebAssetHandler);
   const io = new Server(server, {});
   const gameStore = new GameStore(config, io);
   const createGameHandler = getCreateGameHandler(gameStore);
   app.post("/api/create-game", handlerWrapper(createGameHandler));
   app.get("/api/parse-key/:key", handlerWrapper(parseKey));
-  io.on("connection", socket => handleGameSocketConnection(gameStore, socket));
+  io.on("connection", socket => handleGameSocketConnection(config, gameStore, socket));
   server.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);
   });

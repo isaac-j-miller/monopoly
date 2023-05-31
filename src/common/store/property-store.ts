@@ -61,6 +61,9 @@ export class PropertyStore implements IPropertyStore {
       }
     });
   }
+  all(): GenericProperty[] {
+    return Object.values(this.genericProperties);
+  }
   get(id: number): GenericProperty {
     return this.genericProperties[id];
   }

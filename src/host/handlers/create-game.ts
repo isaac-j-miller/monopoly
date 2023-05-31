@@ -9,8 +9,7 @@ export const getCreateGameHandler = (store: GameStore) => {
     req,
     res
   ) => {
-    const params = store.getGameConfig(req.body);
-    store.createGame(params);
+    const gameId = store.createGame(req.body);
     const data: CreateGameResponse = {
       keys: {},
     };
@@ -19,13 +18,13 @@ export const getCreateGameHandler = (store: GameStore) => {
         return;
       }
       const key = serializeGamePlayer({
-        gameId: params.gameId,
+        gameId,
         playerId: id,
       });
       data.keys[id] = key;
     });
     res.send(data);
-    console.log(`created game with id ${params.gameId}`);
+    console.log(`created game with id ${gameId}`);
   };
   return createGameHandler;
 };

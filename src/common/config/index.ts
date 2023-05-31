@@ -1,8 +1,8 @@
-import { CreditRating } from "common/state/types";
-import { RuntimeConfig } from "./types";
-import { PropertyColor } from "common/board/types";
 import chalk from "chalk";
+import { CreditRating } from "common/state/types";
 import { PropertyLevel } from "common/property/types";
+import { PropertyColor } from "common/board/types";
+import { HumanOrComputerPlayerType, RuntimeConfig } from "./types";
 
 export function getRuntimeConfig(): RuntimeConfig {
   const config: RuntimeConfig = {
@@ -58,6 +58,9 @@ export function getRuntimeConfig(): RuntimeConfig {
         netWorth: 800,
         position: 0,
         properties: new Set(),
+        emoji: "PLACEHOLDER",
+        riskiness: 0.5,
+        type: HumanOrComputerPlayerType.Computer,
       },
       emojiPool: ["👨", "🤖", "🎃", "👻", "😈", "🧚‍♀️", "👽", "🤠", "🤡", "🤑"],
     },

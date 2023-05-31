@@ -9,9 +9,9 @@ export function getUniqueId(): string {
   return crypto.randomBytes(6).toString("hex");
 }
 
-export function assertIsDefined<T>(x: T): asserts x is NonNullable<T> {
+export function assertIsDefined<T>(x: T, message?: string): asserts x is NonNullable<T> {
   if (typeof x === "undefined") {
-    throw new Error("cannot be undefined");
+    throw new Error(message ?? "cannot be undefined");
   }
 }
 

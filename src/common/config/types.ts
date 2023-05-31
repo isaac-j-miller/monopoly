@@ -43,6 +43,7 @@ export enum HumanOrComputerPlayerType {
 
 export type PlayerConfigParams = {
   id: PlayerId;
+  // TODO: add name and emoji
   type: HumanOrComputerPlayerType;
 };
 export type GameConfigParams = {

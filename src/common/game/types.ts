@@ -3,6 +3,8 @@ import { LoanQuote } from "common/loan/types";
 import type { IPlayer } from "common/player/types";
 import { GameState } from "common/state/types";
 
+export type EventHook = (event: GameEvent) => void;
+
 export interface IGame {
   readonly gameConfig: GameConfig;
   readonly state: GameState;
@@ -13,6 +15,7 @@ export interface IGame {
   takePlayerTurn(player: IPlayer): Promise<void>;
   createLoan(loan: LoanQuote): void;
   processEvent(event: Omit<GameEvent, "turn" | "order">): void;
+  registerEventHook(hook: EventHook): void;
 }
 
 export type GameConfig = {

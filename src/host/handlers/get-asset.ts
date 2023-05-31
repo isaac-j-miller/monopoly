@@ -1,10 +1,12 @@
 import path from "path";
 import fs from "fs";
 import { RequestHandler } from "./wrapper";
-import {Request, Response} from "express";
+import { Request, Response } from "express";
 import { ViteDevServer } from "vite";
 
-export const getWebIndexHandler = (vite: ViteDevServer): RequestHandler => (req, res) => {
+export const getWebIndexHandler =
+  (vite: ViteDevServer): RequestHandler =>
+  (req, res) => {
     const filePath = path.join(vite.config.root, "assets/index.html");
     fs.readFile(
       filePath,
@@ -32,10 +34,12 @@ export const getWebIndexHandler = (vite: ViteDevServer): RequestHandler => (req,
         }
       }
     );
-  }
+  };
 
-export const getWebAsset = (vite: ViteDevServer): RequestHandler => (req: Request<{ asset: string }>, res) => {
+export const getWebAsset =
+  (vite: ViteDevServer): RequestHandler =>
+  (req: Request<{ asset: string }>, res) => {
     const { asset } = req.params;
     const assetPath = path.join(vite.config.root, "assets", asset);
     res.sendFile(assetPath);
-  }
+  };

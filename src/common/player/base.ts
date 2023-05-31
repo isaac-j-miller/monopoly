@@ -1,6 +1,6 @@
 import type { IDecisionMaker } from "common/decision-maker/types";
 import { CreditRating, PlayerId, PlayerState } from "common/state/types";
-import type { HumanOrComputerPlayerType, RuntimeConfig } from "common/config/types";
+import type { RuntimeConfig } from "common/config/types";
 import type { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
 import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { IGame } from "common/game/types";
@@ -16,7 +16,6 @@ import { PayBankReason } from "common/events/types";
 import { PayBankEvent } from "common/events/types";
 
 export class PlayerBase {
-  protected state: PlayerState;
   protected game!: IGame;
   constructor(
     protected config: RuntimeConfig,
@@ -24,12 +23,20 @@ export class PlayerBase {
     protected loanStore: ILoanStore,
     protected playerStore: IPlayerStore,
     protected decisionMaker: IDecisionMaker,
-    public readonly riskiness: number,
     private _id: PlayerId,
-    public readonly emoji: string,
-    public readonly type: HumanOrComputerPlayerType
-  ) {
-    this.state = config.players.initialState;
+    protected state: PlayerState
+  ) {}
+  getState() {
+    return this.state;
+  }
+  public get type() {
+    return this.state.type;
+  }
+  public get emoji() {
+    return this.state.emoji;
+  }
+  public get riskiness() {
+    return this.state.riskiness;
   }
   public get id(): PlayerId {
     return this._id;

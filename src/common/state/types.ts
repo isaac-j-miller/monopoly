@@ -1,5 +1,6 @@
 import { IBoard } from "common/board/types";
 import { ChanceCard, CommunityChestCard } from "common/cards/types";
+import { HumanOrComputerPlayerType } from "common/config/types";
 import { LoanId } from "common/loan/types";
 import { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
 
@@ -38,6 +39,9 @@ export interface PlayerState {
   creditRatingLendingThreshold: CreditRating;
   getOutOfJailFreeCards: number;
   mostRecentRoll: [number, number] | null;
+  riskiness: number;
+  emoji: string;
+  type: HumanOrComputerPlayerType;
 }
 
 export interface GameState {

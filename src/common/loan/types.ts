@@ -12,7 +12,7 @@ export type LoanState = {
   remainingInterest: number;
   readonly initialPrincipal: number;
   term: number;
-}
+};
 
 export interface ILoan extends LoanState {
   setCreditor(playerId: PlayerId): void;

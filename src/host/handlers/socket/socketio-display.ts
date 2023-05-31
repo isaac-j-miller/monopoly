@@ -1,18 +1,20 @@
 import { Server } from "socket.io";
 import { IGame } from "common/game/types";
 import { IDisplay } from "common/user-interface/types";
+import { GameEvent } from "common/events/types";
 import { SocketStateUpdate } from "common/state/socket";
-import { PlayerId, PlayerState } from "common/state/types";
 import { LoanId, LoanState } from "common/loan/types";
 import { GenericProperty } from "common/property/types";
+import { PlayerId, PlayerState } from "common/state/types";
 
 export class SocketIOGameDisplay implements IDisplay {
   private game!: IGame;
-  constructor(private readonly io: Server, readonly gameId: string) {
-  }
-  async update(): Promise<void> {
-    const {io, gameId} = this;
-    
+  constructor(private readonly io: Server, readonly gameId: string) {}
+  processEvent = (event: GameEvent) => {
+    console.debug(`sending game event ${event.type}`);
+    this.io.to(this.gameId).emit("GAME_EVENT", event);
+  };
+  getState = (): SocketStateUpdate => {
     const update: SocketStateUpdate = {
       players: this.game.state.playerTurnOrder.reduce((record, id) => {
         record[id] = this.game.state.playerStore.get(id).getState();
@@ -25,13 +27,15 @@ export class SocketIOGameDisplay implements IDisplay {
       properties: this.game.state.propertyStore.all().reduce((acc, curr) => {
         acc[curr.propertyId] = curr;
         return acc;
-      }, {} as Record<number, GenericProperty>)
-
-    }
-    // TODO: acknowledge receipts
-    io.to(gameId).emit("STATE_UPDATE", update)
-  }
+      }, {} as Record<number, GenericProperty>),
+      board: this.game.state.board.positions,
+      playerTurnOrder: this.game.state.playerTurnOrder,
+      // TODO: add cards
+    };
+    return update;
+  };
   register(game: IGame): void {
     this.game = game;
+    this.game.registerEventHook(this.processEvent);
   }
 }

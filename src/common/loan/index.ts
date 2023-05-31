@@ -3,30 +3,27 @@ import { ILoan, LoanQuote, LoanState } from "./types";
 import { getUniqueId } from "common/util";
 
 export class Loan implements ILoan {
-  constructor(
-    private state: LoanState
-  ) {
-  }
+  constructor(private state: LoanState) {}
   toObject(): LoanState {
     return this.state;
   }
   get rateType() {
-    return this.state.rateType
+    return this.state.rateType;
   }
   get remainingPrincipal() {
-    return this.state.remainingPrincipal
+    return this.state.remainingPrincipal;
   }
   get remainingInterest() {
-    return this.state.remainingInterest
+    return this.state.remainingInterest;
   }
   get initialPrincipal() {
-    return this.state.initialPrincipal
+    return this.state.initialPrincipal;
   }
   get term() {
-    return this.state.term
+    return this.state.term;
   }
   get id() {
-    return this.state.id
+    return this.state.id;
   }
   get rate(): number {
     return this.state.rate;
@@ -35,8 +32,8 @@ export class Loan implements ILoan {
     return this.state.creditor;
   }
   get debtor(): PlayerId {
-    return this.state.debtor
-  };
+    return this.state.debtor;
+  }
   getFaceValue(): number {
     const normalPaymentAmount = this.getNominalPaymentAmount();
     const remaining = this.getCurrentBalance();
@@ -70,26 +67,25 @@ export class Loan implements ILoan {
     return this.getCurrentBalance();
   }
   getNominalPaymentAmount(): number {
-    const totalAmountDue = this.state.initialPrincipal + this.state.term * this.state.initialPrincipal * this.rate;
+    const totalAmountDue =
+      this.state.initialPrincipal + this.state.term * this.state.initialPrincipal * this.rate;
     return totalAmountDue / this.state.term;
   }
 }
 
 export function createLoanFromQuote(quote: LoanQuote): ILoan {
-  const {amount, creditor, debtor, rate, rateType,term} = quote
-  return new Loan(
-    {
-      id: getUniqueId(),
-      remainingPrincipal: amount,
-      initialPrincipal: amount, 
-      creditor,
-      debtor,
-      rate,
-      rateType,
-      term,
-      remainingInterest: 0,
-    }
-  );
+  const { amount, creditor, debtor, rate, rateType, term } = quote;
+  return new Loan({
+    id: getUniqueId(),
+    remainingPrincipal: amount,
+    initialPrincipal: amount,
+    creditor,
+    debtor,
+    rate,
+    rateType,
+    term,
+    remainingInterest: 0,
+  });
 }
 
 export function getLoanQuoteFaceValue(quote: LoanQuote): number {

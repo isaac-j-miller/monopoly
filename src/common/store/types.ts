@@ -4,7 +4,7 @@ import { GenericProperty, Property, Utility, Railroad } from "common/property/ty
 import type { PlayerId } from "common/state/types";
 
 export interface IPropertyStore {
-  all(): GenericProperty[]
+  all(): GenericProperty[];
   get(id: number): GenericProperty;
   updateProperty(id: number, property: Partial<Property>): void;
   updateUtility(id: number, property: Partial<Utility>): void;

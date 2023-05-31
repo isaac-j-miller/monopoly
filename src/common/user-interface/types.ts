@@ -8,6 +8,5 @@ export interface IUserInput {
 }
 
 export interface IDisplay {
-  update(): Promise<void>;
   register(game: IGame): void;
 }

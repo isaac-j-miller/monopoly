@@ -15,4 +15,7 @@ export class LoanStore implements ILoanStore {
   get(id: LoanId): ILoan {
     return this.loans[id];
   }
+  all(): ILoan[] {
+    return Object.values(this.loans);
+  }
 }

@@ -12,17 +12,18 @@ import {
 } from "common/events/types";
 import { PlayerId } from "common/state/types";
 import { createLoanFromQuote } from "common/loan";
-import { IDisplay } from "common/user-interface/types";
 import { LoanQuote } from "common/loan/types";
-import { GameConfig, IGame } from "./types";
+import { EventHook, GameConfig, IGame } from "./types";
 
 export class Game implements IGame {
   constructor(
     private config: RuntimeConfig,
     private bus: EventBus,
-    private display: IDisplay,
     readonly gameConfig: GameConfig
   ) {}
+  registerEventHook(hook: EventHook) {
+    this.bus.registerEventHook(hook);
+  }
   public get turn() {
     return this.bus.state.turn;
   }
@@ -30,7 +31,14 @@ export class Game implements IGame {
     return this.bus.state.currentPlayerTurn;
   }
   public get players() {
-    return this.bus.state.playerTurnOrder.map(id => this.bus.state.playerStore.get(id));
+    const players: IPlayer[] = [];
+    this.bus.state.playerTurnOrder.forEach(id => {
+      const player = this.bus.state.playerStore.get(id);
+      if (player) {
+        players.push(player);
+      }
+    });
+    return players;
   }
   public get state() {
     return this.bus.state;
@@ -43,8 +51,8 @@ export class Game implements IGame {
     return true;
   }
   addPlayer(player: IPlayer): void {
+    const idx = this.players.findIndex(p => p.id === player.id);
     this.state.playerStore.add(player);
-    this.players.push(player);
     if (this.state.playerTurnOrder.includes(player.id)) {
       return;
     }
@@ -71,7 +79,6 @@ export class Game implements IGame {
     this.processEventInternal(rollEvent);
   }
   async start(): Promise<void> {
-    this.display.register(this);
     const { config } = this;
     while (config.turnLimit === null || this.turn < config.turnLimit) {
       await this.takeTurn();
@@ -106,7 +113,6 @@ export class Game implements IGame {
   }
   private processEventInternal(event: GameEvent): void {
     this.bus.processEvent(event);
-    void this.display.update();
   }
   processEvent(event: Omit<GameEvent, "turn" | "order">): void {
     this.processEventInternal({

@@ -34,6 +34,7 @@ import { BoardPosition, PositionType } from "common/board/types";
 import { RuntimeConfig } from "common/config/types";
 import { Property } from "common/property/types";
 import { determineRentPaymentAmount } from "./util";
+import { EventHook } from "common/game/types";
 
 type GameStateAndEventsObject = {
   initialState: GameState;
@@ -41,6 +42,7 @@ type GameStateAndEventsObject = {
 };
 
 export class EventBus {
+  private eventHooks: EventHook[];
   private events: GameEvent[];
   private currentState: GameState;
   constructor(
@@ -50,12 +52,15 @@ export class EventBus {
   ) {
     this.events = events ?? [];
     this.currentState = { ...initialState };
+    this.eventHooks = [];
   }
 
   get state(): GameState {
     return this.currentState;
   }
-
+  registerEventHook(hook: EventHook) {
+    this.eventHooks.push(hook);
+  }
   toObject(): GameStateAndEventsObject {
     const { initialState, events } = this;
     return { initialState, events };
@@ -63,6 +68,9 @@ export class EventBus {
   processEvent(event: GameEvent) {
     this.handleStateUpdate(event);
     this.events.push(event);
+    this.eventHooks.forEach(hook => {
+      hook(event);
+    });
   }
   private handleStateUpdate(event: GameEvent) {
     switch (event.type) {
