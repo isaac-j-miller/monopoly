@@ -9,6 +9,7 @@ import {
   GameEvent,
   LoanCreationEvent,
   RollEvent,
+  StartPlayerTurnEvent,
 } from "common/events/types";
 import { PlayerId } from "common/state/types";
 import { createLoanFromQuote } from "common/loan";
@@ -52,7 +53,7 @@ export class Game implements IGame {
   }
   addPlayer(player: IPlayer): void {
     const idx = this.players.findIndex(p => p.id === player.id);
-    this.state.playerStore.add(player);
+    this.state.playerStore.set(player);
     if (this.state.playerTurnOrder.includes(player.id)) {
       return;
     }
@@ -80,6 +81,9 @@ export class Game implements IGame {
   }
   async start(): Promise<void> {
     const { config } = this;
+    this.processEvent({
+      type: EventType.StartGame,
+    });
     while (config.turnLimit === null || this.turn < config.turnLimit) {
       await this.takeTurn();
     }
@@ -100,16 +104,19 @@ export class Game implements IGame {
     if (player.isBank) {
       return;
     }
+    const event: Omit<StartPlayerTurnEvent, "turn" | "order"> = {
+      type: EventType.StartPlayerTurn,
+      player: player.id,
+    };
+    this.processEvent(event);
     this.roll(player.id);
     await player.takeTurn();
     player.recalculateValues();
-    const endPlayerTurnEvent: CompletePlayerTurnEvent = {
+    const endPlayerTurnEvent: Omit<CompletePlayerTurnEvent, "turn" | "order"> = {
       type: EventType.CompletePlayerTurn,
-      order: this.currentPlayerTurn,
-      turn: this.turn,
       player: player.id,
     };
-    this.processEventInternal(endPlayerTurnEvent);
+    this.processEvent(endPlayerTurnEvent);
   }
   private processEventInternal(event: GameEvent): void {
     this.bus.processEvent(event);

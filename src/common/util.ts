@@ -18,3 +18,8 @@ export function assertIsDefined<T>(x: T, message?: string): asserts x is NonNull
 export function getRiskyness(): number {
   return crypto.randomInt(100) / 100;
 }
+
+export function isPromise(x: unknown): x is Promise<unknown> {
+  const then = (x as any)?.then;
+  return typeof then === "function";
+}

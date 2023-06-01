@@ -4,13 +4,15 @@ import styled from "@emotion/styled";
 import { BoardSize, GenericPosition } from "./board-components/generic";
 import { getPositionComponent } from "./board-components/get-component";
 
-export type GameBoardProps = SocketProps;
+export type GameBoardProps = SocketProps & {
+  counter: number;
+};
 
 const BoardBox = styled.div`
   position: relative;
 `;
 
-export const GameBoard: React.FC<GameBoardProps> = ({ socket }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ socket, counter }) => {
   const boardSize = React.useMemo(
     () => new BoardSize(socket.state.board.positions.length),
     [socket.state.board.positions.length]
@@ -27,6 +29,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ socket }) => {
         const component = getPositionComponent(position);
         return (
           <GenericPosition
+            counter={counter}
             boardSize={boardSize}
             child={component}
             position={position.position}

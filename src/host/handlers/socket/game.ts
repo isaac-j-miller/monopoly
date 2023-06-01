@@ -24,32 +24,40 @@ export class GameSocket {
     this.playerId = playerId as PlayerId;
   }
   setup() {
-    const game = this.gameStore.getGame(this.gameId);
-    const display = this.gameStore.getDisplay(this.gameId);
-    assertIsDefined(game, `game with id ${this.gameId} not found`);
-    assertIsDefined(display);
-    this.display = display;
-    this.socket.on("REQUEST_STATE", cb => {
-      console.log("received REQUEST_STATE");
-      const state = this.display.getState();
-      cb(state);
+    this.gameStore.withGame(this.gameId, game => {
+      const display = this.gameStore.getDisplay(this.gameId);
+      assertIsDefined(game, `game with id ${this.gameId} not found`);
+      assertIsDefined(display);
+      this.display = display;
+      this.socket.on("REQUEST_STATE", cb => {
+        console.log("received REQUEST_STATE");
+        const state = this.display.getState();
+        cb(state);
+      });
+      this.socket.join(this.gameId);
+      if (this.playerId) {
+        const params = this.gameStore.getGameOriginalParams(this.gameId);
+        const [_, iString] = this.playerId.split("_");
+        const i = Number.parseInt(iString);
+        assertIsDefined(params);
+        const playerState: PlayerState = {
+          ...this.config.players.initialState,
+          cashOnHand: params.bank.startingMoney,
+          // TODO: make emoji configurable
+          emoji: this.config.players.emojiPool[i],
+          type: HumanOrComputerPlayerType.Human,
+        };
+        this.gameStore.registerPlayer(this.gameId, this.playerId, this, playerState);
+        console.log(`registered player ${this.playerId} with game ${this.gameId}`);
+      }
+      game.state.playerTurnOrder.forEach(id => {
+        const player = game.state.playerStore.get(id);
+        player.register(game);
+      });
+      this.socket.once("START_GAME", () => {
+        game.start();
+      });
     });
-    this.socket.join(this.gameId);
-    if (this.playerId) {
-      const params = this.gameStore.getGameOriginalParams(this.gameId);
-      const [_, iString] = this.playerId.split("_");
-      const i = Number.parseInt(iString);
-      assertIsDefined(params);
-      const playerState: PlayerState = {
-        ...this.config.players.initialState,
-        cashOnHand: params.bank.startingMoney,
-        // TODO: make emoji configurable
-        emoji: this.config.players.emojiPool[i],
-        type: HumanOrComputerPlayerType.Human,
-      };
-      this.gameStore.registerPlayer(this.gameId, this.playerId, this, playerState);
-      console.log(`registered player ${this.playerId} with game ${this.gameId}`);
-    }
   }
   disconnect() {
     console.log(`Disconnecting socket id ${this.socket.id}`);

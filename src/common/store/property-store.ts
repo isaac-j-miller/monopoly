@@ -2,6 +2,7 @@ import { BoardPosition, IBoard, PositionType } from "common/board/types";
 import { IPropertyStore } from "./types";
 import { GenericProperty, Property, Utility, Railroad, PropertyLevel } from "common/property/types";
 import { assertNever } from "common/util";
+import { isPromise } from "common/util";
 
 export class PropertyStore implements IPropertyStore {
   private genericProperties: Record<number, GenericProperty>;
@@ -67,6 +68,9 @@ export class PropertyStore implements IPropertyStore {
   get(id: number): GenericProperty {
     return this.genericProperties[id];
   }
+  private set(property: GenericProperty) {
+    this.genericProperties[property.propertyId] = property;
+  }
   updateProperty(id: number, property: Partial<Property>): void {
     const p = this.get(id);
     if (p.propertyType !== PositionType.Property) {
@@ -102,5 +106,17 @@ export class PropertyStore implements IPropertyStore {
       ...p,
       ...property,
     };
+  }
+  withProperty<T>(id: number, fn: (property: GenericProperty) => T): T {
+    const property = this.get(id);
+    const result = fn(property);
+    if (isPromise(result)) {
+      result.then(() => {
+        this.set(property);
+      });
+    } else {
+      this.set(property);
+    }
+    return result;
   }
 }

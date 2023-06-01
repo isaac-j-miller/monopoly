@@ -4,7 +4,7 @@ import { PositionInnerProps } from "./generic";
 import { PositionBaseDiv } from "./common";
 
 export const CommunityChestPosition: React.FC<PositionInnerProps> = ({
-  location,
+  emojiBox,
   position,
   state,
 }) => {
@@ -15,6 +15,7 @@ export const CommunityChestPosition: React.FC<PositionInnerProps> = ({
   return (
     <PositionBaseDiv>
       <div>{boardPosition.name}</div>
+      {emojiBox}
     </PositionBaseDiv>
   );
 };

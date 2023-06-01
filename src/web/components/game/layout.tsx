@@ -3,8 +3,8 @@ import styled from "@emotion/styled";
 
 const Root = styled.div`
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
 `;
 
 export const GameLayout: React.FC<PropsWithChildren> = ({ children }) => {

@@ -5,7 +5,7 @@ import { GameConfigParams, HumanOrComputerPlayerType, RuntimeConfig } from "comm
 import { CreditRating, GameState, PlayerId, PlayerState } from "common/state/types";
 import { Game } from "common/game";
 import { EventBus } from "common/events/bus";
-import { getUniqueId } from "common/util";
+import { assertIsDefined, getUniqueId, isPromise } from "common/util";
 import { Board } from "common/board/board";
 import { defaultBoard } from "common/board/default-board";
 import { PropertyStore } from "common/store/property-store";
@@ -33,6 +33,19 @@ export class GameStore {
   getGame(id: string): IGame | undefined {
     return this.games[id]?.game;
   }
+  withGame<T>(id: string, fn: (game: IGame) => T): T {
+    const game = this.getGame(id);
+    assertIsDefined(game, `game with ID ${id} not found`);
+    const result = fn(game);
+    if (isPromise(result)) {
+      result.then(() => {
+        this.games[id].game = game;
+      });
+    } else {
+      this.games[id].game = game;
+    }
+    return result;
+  }
   getGameOriginalParams(id: string): GameConfigParams | undefined {
     return this.games[id]?.params;
   }
@@ -53,15 +66,7 @@ export class GameStore {
       riskiness: params.bank.riskiness,
       emoji: this.config.bank.emoji,
     };
-    const bankPlayer = new Bank(
-      this.config,
-      propertyStore,
-      loanStore,
-      playerStore,
-      bankDecisionMaker,
-      "Bank_0",
-      bankState
-    );
+    const bankPlayer = new Bank(this.config, bankDecisionMaker, "Bank_0", bankState);
 
     const players: IPlayer[] = [bankPlayer];
     params.players.forEach(({ id, type }, i) => {
@@ -75,19 +80,11 @@ export class GameStore {
         emoji: this.config.players.emojiPool[i + 1],
         type,
       };
-      const player = new Player(
-        this.config,
-        propertyStore,
-        loanStore,
-        playerStore,
-        computerDecisionMaker,
-        id,
-        playerState
-      );
+      const player = new Player(this.config, computerDecisionMaker, id, playerState);
       players.push(player);
     });
     players.forEach(player => {
-      playerStore.add(player);
+      playerStore.set(player);
     });
     const initialState: GameState = {
       playerStore: playerStore,
@@ -99,6 +96,7 @@ export class GameStore {
       loanStore,
       propertyStore,
       board,
+      started: false,
     };
     return {
       gameId,
@@ -108,32 +106,26 @@ export class GameStore {
   createGame(params: GameConfigParams): string {
     const config = this.getGameConfig(params);
     const bus = new EventBus(this.config, config.initialState);
-    const display = new SocketIOGameDisplay(this.io, config.gameId);
     const game = new Game(this.config, bus, config);
-    display.register(game);
+    const display = new SocketIOGameDisplay(this.io, config.gameId, this);
     const entry: RecordEntry = {
       display,
       game,
       params,
     };
     this.games[config.gameId] = entry;
+    display.register();
     return config.gameId;
   }
   registerPlayer(gameId: string, playerId: PlayerId, socket: GameSocket, state: PlayerState) {
-    const game = this.getGame(gameId);
-    if (!game) {
+    const g = this.getGame(gameId);
+    if (!g) {
       throw new Error(`no game with ID ${gameId}`);
     }
-    const decisionMaker = new SocketIOHumanDecisionMaker(this.config, socket);
-    const player = new Player(
-      this.config,
-      game.state.propertyStore,
-      game.state.loanStore,
-      game.state.playerStore,
-      decisionMaker,
-      playerId,
-      state
-    );
-    game.addPlayer(player);
+    this.withGame(gameId, game => {
+      const decisionMaker = new SocketIOHumanDecisionMaker(this.config, socket);
+      const player = new Player(this.config, decisionMaker, playerId, state);
+      game.addPlayer(player);
+    });
   }
 }

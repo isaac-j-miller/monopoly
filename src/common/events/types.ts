@@ -27,6 +27,8 @@ export enum EventType {
   LoanAccrueInterest,
   Roll,
   BankPayPlayer,
+  StartGame,
+  StartPlayerTurn,
 }
 
 export enum PayBankReason {
@@ -106,6 +108,7 @@ export interface PlayerDeclareBankruptcyEvent
   extends Event<EventType.PlayerDeclareBankruptcy>,
     PlayerEvent {}
 
+export interface StartPlayerTurnEvent extends Event<EventType.StartPlayerTurn>, PlayerEvent {}
 export interface CompletePlayerTurnEvent extends Event<EventType.CompletePlayerTurn>, PlayerEvent {}
 
 export interface CompleteTurnEvent extends Event<EventType.CompleteTurn> {}
@@ -148,6 +151,7 @@ export interface BankPayPlayerEvent extends Event<EventType.BankPayPlayer>, Play
 export interface RollEvent extends Event<EventType.Roll>, PlayerEvent {
   roll: [number, number];
 }
+export interface StartGameEvent extends Event<EventType.StartGame> {}
 
 export type EventTypeMap = {
   [EventType.LoanCreation]: LoanCreationEvent;
@@ -173,6 +177,8 @@ export type EventTypeMap = {
   [EventType.LoanAccrueInterest]: LoanAccrueInterestEvent;
   [EventType.Roll]: RollEvent;
   [EventType.BankPayPlayer]: BankPayPlayerEvent;
+  [EventType.StartGame]: StartGameEvent;
+  [EventType.StartPlayerTurn]: StartPlayerTurnEvent;
 };
 
 export type GameEvent = EventTypeMap[EventType];

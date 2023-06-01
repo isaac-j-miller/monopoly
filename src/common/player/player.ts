@@ -1,10 +1,11 @@
 import { IGame } from "common/game/types";
 import { BoardPosition, PositionType } from "common/board/types";
-import { assertNever } from "common/util";
+import { assertIsDefined, assertNever } from "common/util";
 import {
   EventType,
   GetOutOfJailEvent,
   GetOutOfJailReason,
+  PlayerMoveEvent,
   PropertyUpgradeEvent,
   RentPaymentEvent,
 } from "common/events/types";
@@ -31,6 +32,16 @@ export class Player extends PlayerBase implements IPlayer {
     };
     this.game.processEvent(event);
   }
+  private move() {
+    const roll = this.mostRecentRoll;
+    assertIsDefined(roll);
+    const event: Omit<PlayerMoveEvent, "turn" | "order"> = {
+      type: EventType.PlayerMove,
+      delta: roll[0] + roll[1],
+      player: this.id,
+    };
+    this.game.processEvent(event);
+  }
   public get isBank(): boolean {
     return false;
   }
@@ -39,14 +50,37 @@ export class Player extends PlayerBase implements IPlayer {
     this.decisionMaker.register(game, this);
   }
   async takeTurn(): Promise<void> {
-    let loanPaymentsTotal = 0;
-    this.state.debtLoans.forEach(loanId => {
-      const loan = this.game.state.loanStore.get(loanId);
-      const nominalPaymentAmount = loan.getNominalPaymentAmount();
-      loan.makePayment(nominalPaymentAmount);
-      loanPaymentsTotal += nominalPaymentAmount;
-    });
-    await this.handleFinanceOption(loanPaymentsTotal, "Loan Payments");
+    // TODO: move based on roll and whether in jail or not,
+    if (this.inJail) {
+      if (this.state.getOutOfJailFreeCards > 0) {
+        const shouldUseCard = await this.decisionMaker.decideToUseGetOutOfJailFreeCard();
+        if (shouldUseCard) {
+          const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
+            player: this.id,
+            reason: GetOutOfJailReason.Card,
+            type: EventType.GetOutOfJail,
+          };
+          this.game.processEvent(useCard);
+        }
+      } else {
+        const shouldPay = await this.decisionMaker.decideToPayToGetOutOfJail();
+        if (shouldPay) {
+          const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
+            player: this.id,
+            reason: GetOutOfJailReason.Pay,
+            type: EventType.GetOutOfJail,
+          };
+          this.game.processEvent(useCard);
+          await this.handleFinanceOption(
+            this.config.jail.getOfJailBaseCost,
+            "Pay to get out of jail"
+          );
+        }
+      }
+    }
+    if (!this.inJail) {
+      this.move();
+    }
     const { position } = this;
     const boardPosition = this.game.state.board.positions[position];
     switch (boardPosition.type) {
@@ -56,34 +90,6 @@ export class Player extends PlayerBase implements IPlayer {
       case PositionType.GoToJail:
         break;
       case PositionType.Jail:
-        if (!this.inJail) {
-          break;
-        }
-        if (this.state.getOutOfJailFreeCards > 0) {
-          const shouldUseCard = await this.decisionMaker.decideToUseGetOutOfJailFreeCard();
-          if (shouldUseCard) {
-            const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
-              player: this.id,
-              reason: GetOutOfJailReason.Card,
-              type: EventType.GetOutOfJail,
-            };
-            this.game.processEvent(useCard);
-          }
-        } else {
-          const shouldPay = await this.decisionMaker.decideToPayToGetOutOfJail();
-          if (shouldPay) {
-            const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
-              player: this.id,
-              reason: GetOutOfJailReason.Pay,
-              type: EventType.GetOutOfJail,
-            };
-            this.game.processEvent(useCard);
-            await this.handleFinanceOption(
-              this.config.jail.getOfJailBaseCost,
-              "Pay to get out of jail"
-            );
-          }
-        }
         break;
       case PositionType.Tax: {
         const { baseAmount } = boardPosition as BoardPosition<PositionType.Tax>;
@@ -120,6 +126,17 @@ export class Player extends PlayerBase implements IPlayer {
       }
       default:
         assertNever(boardPosition.type);
+    }
+
+    let loanPaymentsTotal = 0;
+    this.state.debtLoans.forEach(loanId => {
+      const loan = this.game.state.loanStore.get(loanId);
+      const nominalPaymentAmount = loan.getNominalPaymentAmount();
+      loan.makePayment(nominalPaymentAmount);
+      loanPaymentsTotal += nominalPaymentAmount;
+    });
+    if (loanPaymentsTotal > 0) {
+      await this.handleFinanceOption(loanPaymentsTotal, "Loan Payments");
     }
     // if we have a negative cash balance, cover it before continuing with optional actions
     if (this.cashOnHand < 0) {

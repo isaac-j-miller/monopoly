@@ -98,7 +98,7 @@ export const Home: React.FC = () => {
               {Object.entries(resp.keys).map(([player, key]) => {
                 const url = `/game/${key}`;
                 return (
-                  <HorizontalDiv>
+                  <HorizontalDiv key={`join:${url}`}>
                     <label>{player}</label>
                     <AnchorButton href={url}>Join Game</AnchorButton>
                   </HorizontalDiv>

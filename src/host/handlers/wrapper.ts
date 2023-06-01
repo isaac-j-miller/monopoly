@@ -1,4 +1,4 @@
-import { isPromise } from "util/types";
+import { isPromise } from "common/util";
 import { RequestHandler as ExpressRequestHandler, Request, NextFunction, Response } from "express";
 
 type RequestHandler2<TParams = any, TResBody = any, TReqBody = any, TReqQuery = any> = (

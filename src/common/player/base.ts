@@ -1,7 +1,6 @@
 import type { IDecisionMaker } from "common/decision-maker/types";
-import { CreditRating, PlayerId, PlayerState } from "common/state/types";
+import { CreditRating, PlayerId, PlayerState, SerializablePlayerState } from "common/state/types";
 import type { RuntimeConfig } from "common/config/types";
-import type { ILoanStore, IPlayerStore, IPropertyStore } from "common/store/types";
 import type { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { IGame } from "common/game/types";
 import { PropertyQuote } from "common/property/types";
@@ -10,24 +9,27 @@ import {
   LoanCreationEvent,
   LoanTransferEvent,
   PropertyTransferEvent,
+  PayBankReason,
+  PayBankEvent,
 } from "common/events/types";
 import { createLoanFromQuote } from "common/loan";
-import { PayBankReason } from "common/events/types";
-import { PayBankEvent } from "common/events/types";
 
 export class PlayerBase {
   protected game!: IGame;
   constructor(
     protected config: RuntimeConfig,
-    protected propertyStore: IPropertyStore,
-    protected loanStore: ILoanStore,
-    protected playerStore: IPlayerStore,
     protected decisionMaker: IDecisionMaker,
     private _id: PlayerId,
     protected state: PlayerState
   ) {}
-  getState() {
-    return this.state;
+  getState(): SerializablePlayerState {
+    const { creditLoans, debtLoans, properties, ...rest } = this.state;
+    return {
+      ...rest,
+      creditLoans: Array.from(creditLoans),
+      debtLoans: Array.from(debtLoans),
+      properties: Array.from(properties),
+    };
   }
   public get type() {
     return this.state.type;
@@ -78,6 +80,7 @@ export class PlayerBase {
     this.state.mostRecentRoll = roll;
   }
   setPosition(position: number): void {
+    console.log(`setting position of ${this.id} to ${position}`);
     this.state.position = position;
   }
   getOutOfJail(): void {
@@ -177,7 +180,7 @@ export class PlayerBase {
     // TODO: implement
     this.state.creditRatingLendingThreshold = CreditRating.C;
   }
-  protected recalculateNetWorth(): number {
+  public getNetWorth(): number {
     const totalAssetValue = this.getTotalAssetValue();
     const totalLiabilityValue = this.getTotalLiabilityValue();
     const netWorth = totalAssetValue - totalLiabilityValue;
@@ -187,16 +190,16 @@ export class PlayerBase {
   public recalculateValues(): void {
     this.recalculateCreditRating();
     this.recalculateCreditRatingLendingThreshold();
-    this.recalculateNetWorth();
+    this.getNetWorth();
   }
   public getTotalAssetValue(): number {
     let value = this.state.cashOnHand;
     this.state.properties.forEach(id => {
-      const property = this.propertyStore.get(id);
+      const property = this.game.state.propertyStore.get(id);
       value += property.marketValue;
     });
     this.state.creditLoans.forEach(id => {
-      const loan = this.loanStore.get(id);
+      const loan = this.game.state.loanStore.get(id);
       const loanFaceValue = loan.getFaceValue();
       value += loanFaceValue;
     });
@@ -205,7 +208,7 @@ export class PlayerBase {
   public getTotalLiabilityValue(): number {
     let value = 0;
     this.state.debtLoans.forEach(id => {
-      const loan = this.loanStore.get(id);
+      const loan = this.game.state.loanStore.get(id);
       const remainingBalance = loan.getCurrentBalance();
       value += remainingBalance;
     });

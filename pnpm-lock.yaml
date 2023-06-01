@@ -3,11 +3,13 @@ lockfileVersion: 5.4
 specifiers:
   "@blueprintjs/core": ^4.19.5
   "@blueprintjs/icons": ^4.16.0
+  "@blueprintjs/popover2": ^1.14.8
   "@blueprintjs/select": ^4.9.20
   "@blueprintjs/table": ^4.10.7
   "@emotion/react": ^11.11.0
   "@emotion/styled": ^11.11.0
   "@esbuild-plugins/node-globals-polyfill": ^0.2.3
+  "@esbuild-plugins/node-modules-polyfill": ^0.2.2
   "@types/express": ^4.17.17
   "@types/node": "20"
   "@types/react": ^18.2.7
@@ -19,24 +21,27 @@ specifiers:
   esbuild: ^0.17.18
   eslint: ^8.40.0
   express: ^4.18.2
+  node-modules-polyfill: link:@types/@esbuild-plugins/node-modules-polyfill
   prettier: ^2.8.8
   react: ^18.2.0
   react-dom: ^18.2.0
   react-router-dom: ^6.11.2
+  rollup-plugin-node-polyfills: ^0.2.1
   socket.io: ^4.6.1
   socket.io-client: ^4.6.1
   string-length: ^4.0.2
   string-width: ^4.2.3
   ts-node: ^10.9.1
   tsconfig-paths: ^4.2.0
-  tsx: ^3.12.7
   typescript: ^5.0.4
+  util: ^0.12.5
   vite: ^4.3.9
   vite-tsconfig-paths: ^4.2.0
 
 dependencies:
   "@blueprintjs/core": 4.19.5_psemcf34ovg2dno52nagbe3daa
   "@blueprintjs/icons": 4.16.0
+  "@blueprintjs/popover2": 1.14.8_psemcf34ovg2dno52nagbe3daa
   "@blueprintjs/select": 4.9.20_psemcf34ovg2dno52nagbe3daa
   "@blueprintjs/table": 4.10.7_psemcf34ovg2dno52nagbe3daa
   "@emotion/react": 11.11.0_bfoz4c5kom3f237nig75ykjhhy
@@ -55,10 +60,12 @@ dependencies:
   string-width: 4.2.3
   ts-node: 10.9.1_7d6xsihq32xp7hx6ta4a3u7eky
   tsconfig-paths: 4.2.0
+  util: 0.12.5
   vite: 4.3.9_@types+node@20.1.3
   vite-tsconfig-paths: 4.2.0_2gs4ymahx52s2pmgq265ylhxyq
 
 devDependencies:
+  "@esbuild-plugins/node-modules-polyfill": 0.2.2_esbuild@0.17.18
   "@types/express": 4.17.17
   "@types/node": 20.1.3
   "@types/react": 18.2.7
@@ -66,8 +73,9 @@ devDependencies:
   "@types/react-router-dom": 5.3.3
   esbuild: 0.17.18
   eslint: 8.40.0
+  node-modules-polyfill: link:@types/@esbuild-plugins/node-modules-polyfill
   prettier: 2.8.8
-  tsx: 3.12.7
+  rollup-plugin-node-polyfills: 0.2.1
   typescript: 5.0.4
 
 packages:
@@ -423,6 +431,36 @@ packages:
       tslib: 2.5.2
     dev: false
 
+  /@blueprintjs/core/4.20.0_psemcf34ovg2dno52nagbe3daa:
+    resolution:
+      {
+        integrity: sha512-hhsTRLVgWv8lR4rUxV4Ybft3wYd/MQJ9SjXvqRe7zCxo+AS2qo3Y6zzPuDUW90CMkzwYHAVerP37cLlvgxSPNQ==,
+      }
+    hasBin: true
+    peerDependencies:
+      "@types/react": ^16.14.32 || 17 || 18
+      react: ^16.8 || 17 || 18
+      react-dom: ^16.8 || 17 || 18
+    peerDependenciesMeta:
+      "@types/react":
+        optional: true
+    dependencies:
+      "@blueprintjs/colors": 4.2.1
+      "@blueprintjs/icons": 4.16.0
+      "@juggle/resize-observer": 3.4.0
+      "@types/dom4": 2.0.2
+      "@types/react": 18.2.7
+      classnames: 2.3.2
+      dom4: 2.1.6
+      normalize.css: 8.0.1
+      popper.js: 1.16.1
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
+      react-popper: 1.3.11_react@18.2.0
+      react-transition-group: 4.4.5_biqbaboplfbrettd7655fr4n2y
+      tslib: 2.5.2
+    dev: false
+
   /@blueprintjs/icons/4.16.0:
     resolution:
       {
@@ -434,10 +472,10 @@ packages:
       tslib: 2.5.2
     dev: false
 
-  /@blueprintjs/popover2/1.14.7_psemcf34ovg2dno52nagbe3daa:
+  /@blueprintjs/popover2/1.14.8_psemcf34ovg2dno52nagbe3daa:
     resolution:
       {
-        integrity: sha512-NeSWgC0F9IfyJG8knfCTyKMA/PhwBtEZXekTuf986L96IvMNbGKKUfiW08Gwy2188VYHwDKteIDfsnx6b7h6eA==,
+        integrity: sha512-rzWmN0NLddjTJBA4Q+ddlQGglSxxYHNVf1bp0FQEgoSMBnDY/xIKJgsjnS5h6Moq9rXaLlMad0o02P+8ZeBHqA==,
       }
     peerDependencies:
       "@types/react": ^16.14.32 || 17 || 18
@@ -447,7 +485,7 @@ packages:
       "@types/react":
         optional: true
     dependencies:
-      "@blueprintjs/core": 4.19.5_psemcf34ovg2dno52nagbe3daa
+      "@blueprintjs/core": 4.20.0_psemcf34ovg2dno52nagbe3daa
       "@juggle/resize-observer": 3.4.0
       "@popperjs/core": 2.11.8
       "@types/react": 18.2.7
@@ -473,7 +511,7 @@ packages:
         optional: true
     dependencies:
       "@blueprintjs/core": 4.19.5_psemcf34ovg2dno52nagbe3daa
-      "@blueprintjs/popover2": 1.14.7_psemcf34ovg2dno52nagbe3daa
+      "@blueprintjs/popover2": 1.14.8_psemcf34ovg2dno52nagbe3daa
       "@types/react": 18.2.7
       classnames: 2.3.2
       react: 18.2.0
@@ -495,7 +533,7 @@ packages:
         optional: true
     dependencies:
       "@blueprintjs/core": 4.19.5_psemcf34ovg2dno52nagbe3daa
-      "@blueprintjs/popover2": 1.14.7_psemcf34ovg2dno52nagbe3daa
+      "@blueprintjs/popover2": 1.14.8_psemcf34ovg2dno52nagbe3daa
       "@types/react": 18.2.7
       classnames: 2.3.2
       prop-types: 15.8.1
@@ -670,36 +708,6 @@ packages:
       }
     dev: false
 
-  /@esbuild-kit/cjs-loader/2.4.2:
-    resolution:
-      {
-        integrity: sha512-BDXFbYOJzT/NBEtp71cvsrGPwGAMGRB/349rwKuoxNSiKjPraNNnlK6MIIabViCjqZugu6j+xeMDlEkWdHHJSg==,
-      }
-    dependencies:
-      "@esbuild-kit/core-utils": 3.1.0
-      get-tsconfig: 4.6.0
-    dev: true
-
-  /@esbuild-kit/core-utils/3.1.0:
-    resolution:
-      {
-        integrity: sha512-Uuk8RpCg/7fdHSceR1M6XbSZFSuMrxcePFuGgyvsBn+u339dk5OeL4jv2EojwTN2st/unJGsVm4qHWjWNmJ/tw==,
-      }
-    dependencies:
-      esbuild: 0.17.18
-      source-map-support: 0.5.21
-    dev: true
-
-  /@esbuild-kit/esm-loader/2.5.5:
-    resolution:
-      {
-        integrity: sha512-Qwfvj/qoPbClxCRNuac1Du01r9gvNOT+pMYtJDapfB1eoGN1YlJ1BixLyL9WVENRx5RXgNLdfYdx/CuswlGhMw==,
-      }
-    dependencies:
-      "@esbuild-kit/core-utils": 3.1.0
-      get-tsconfig: 4.6.0
-    dev: true
-
   /@esbuild-plugins/node-globals-polyfill/0.2.3_esbuild@0.17.18:
     resolution:
       {
@@ -710,6 +718,19 @@ packages:
     dependencies:
       esbuild: 0.17.18
     dev: false
+
+  /@esbuild-plugins/node-modules-polyfill/0.2.2_esbuild@0.17.18:
+    resolution:
+      {
+        integrity: sha512-LXV7QsWJxRuMYvKbiznh+U1ilIop3g2TeKRzUxOG5X3YITc8JyyTa90BmLwqqv0YnX4v32CSlG+vsziZp9dMvA==,
+      }
+    peerDependencies:
+      esbuild: "*"
+    dependencies:
+      esbuild: 0.17.18
+      escape-string-regexp: 4.0.0
+      rollup-plugin-node-polyfills: 0.2.1
+    dev: true
 
   /@esbuild/android-arm/0.17.18:
     resolution:
@@ -1511,6 +1532,14 @@ packages:
       }
     dev: false
 
+  /available-typed-arrays/1.0.5:
+    resolution:
+      {
+        integrity: sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==,
+      }
+    engines: { node: ">= 0.4" }
+    dev: false
+
   /axios/1.4.0:
     resolution:
       {
@@ -1597,13 +1626,6 @@ packages:
       node-releases: 2.0.12
       update-browserslist-db: 1.0.11_browserslist@4.21.7
     dev: false
-
-  /buffer-from/1.1.2:
-    resolution:
-      {
-        integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==,
-      }
-    dev: true
 
   /bytes/3.1.2:
     resolution:
@@ -2257,6 +2279,13 @@ packages:
     engines: { node: ">=4.0" }
     dev: true
 
+  /estree-walker/0.6.1:
+    resolution:
+      {
+        integrity: sha512-SqmZANLWS0mnatqbSfRP5g8OXZC12Fgg1IwNtLsyHDzJizORW4khDfjPqJZsemPWBB2uqykUah5YpQ6epsqC/w==,
+      }
+    dev: true
+
   /esutils/2.0.3:
     resolution:
       {
@@ -2422,6 +2451,15 @@ packages:
         optional: true
     dev: false
 
+  /for-each/0.3.3:
+    resolution:
+      {
+        integrity: sha512-jqYfLp7mo9vIyQf8ykW2v7A+2N4QjeCeI5+Dz9XraiO1ign81wjiH7Fb9vSOWvQfNtmSa4H2RoQTrrXivdUZmw==,
+      }
+    dependencies:
+      is-callable: 1.2.7
+    dev: false
+
   /form-data/4.0.0:
     resolution:
       {
@@ -2465,6 +2503,7 @@ packages:
     engines: { node: ^8.16.0 || ^10.6.0 || >=11.0.0 }
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /function-bind/1.1.1:
@@ -2500,15 +2539,6 @@ packages:
       has-proto: 1.0.1
       has-symbols: 1.0.3
     dev: false
-
-  /get-tsconfig/4.6.0:
-    resolution:
-      {
-        integrity: sha512-lgbo68hHTQnFddybKbbs/RDRJnJT5YyGy2kQzVwbq+g67X73i+5MVTval34QxGkOe9X5Ujf1UYpCaphLyltjEg==,
-      }
-    dependencies:
-      resolve-pkg-maps: 1.0.0
-    dev: true
 
   /glob-parent/6.0.2:
     resolution:
@@ -2557,6 +2587,15 @@ packages:
       {
         integrity: sha512-uHJgbwAMwNFf5mLst7IWLNg14x1CkeqglJb/K3doi4dw6q2IvAAmM/Y81kevy83wP+Sst+nutFTYOGg3d1lsxg==,
       }
+    dev: false
+
+  /gopd/1.0.1:
+    resolution:
+      {
+        integrity: sha512-d65bNlIadxvpb/A2abVdlqKqV563juRnZ1Wtk6s1sIR8uNsXR70xqIzVqxVf1eTqDunwT2MkczEeaezCKTZhwA==,
+      }
+    dependencies:
+      get-intrinsic: 1.2.1
     dev: false
 
   /grapheme-splitter/1.0.4:
@@ -2744,6 +2783,14 @@ packages:
       }
     dev: false
 
+  /is-callable/1.2.7:
+    resolution:
+      {
+        integrity: sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA==,
+      }
+    engines: { node: ">= 0.4" }
+    dev: false
+
   /is-core-module/2.12.1:
     resolution:
       {
@@ -2779,6 +2826,16 @@ packages:
     engines: { node: ">=8" }
     dev: false
 
+  /is-generator-function/1.0.10:
+    resolution:
+      {
+        integrity: sha512-jsEjy9l3yiXEQ+PsXdmBwEPcOxaXWLspKdplFUVI9vq1iZgIekeC0L167qeu86czQaxed3q/Uzuw0swL0irL8A==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      has-tostringtag: 1.0.0
+    dev: false
+
   /is-glob/4.0.3:
     resolution:
       {
@@ -2805,6 +2862,20 @@ packages:
     engines: { node: ">= 0.4" }
     dependencies:
       call-bind: 1.0.2
+      has-tostringtag: 1.0.0
+    dev: false
+
+  /is-typed-array/1.1.10:
+    resolution:
+      {
+        integrity: sha512-PJqgEHiWZvMpaFZ3uTc8kHPM4+4ADTlDniuQL7cU/UDA0Ql7F70yGfHph3cLNe+c9toaigv+DFzTJKhc2CtO6A==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      available-typed-arrays: 1.0.5
+      call-bind: 1.0.2
+      for-each: 0.3.3
+      gopd: 1.0.1
       has-tostringtag: 1.0.0
     dev: false
 
@@ -2940,6 +3011,15 @@ packages:
     dependencies:
       yallist: 3.1.1
     dev: false
+
+  /magic-string/0.25.9:
+    resolution:
+      {
+        integrity: sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ==,
+      }
+    dependencies:
+      sourcemap-codec: 1.4.8
+    dev: true
 
   /make-error/1.3.6:
     resolution:
@@ -3560,13 +3640,6 @@ packages:
       }
     engines: { node: ">=4" }
 
-  /resolve-pkg-maps/1.0.0:
-    resolution:
-      {
-        integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==,
-      }
-    dev: true
-
   /resolve/1.22.2:
     resolution:
       {
@@ -3595,6 +3668,36 @@ packages:
     hasBin: true
     dependencies:
       glob: 7.2.3
+    dev: true
+
+  /rollup-plugin-inject/3.0.2:
+    resolution:
+      {
+        integrity: sha512-ptg9PQwzs3orn4jkgXJ74bfs5vYz1NCZlSQMBUA0wKcGp5i5pA1AO3fOUEte8enhGUC+iapTCzEWw2jEFFUO/w==,
+      }
+    deprecated: This package has been deprecated and is no longer maintained. Please use @rollup/plugin-inject.
+    dependencies:
+      estree-walker: 0.6.1
+      magic-string: 0.25.9
+      rollup-pluginutils: 2.8.2
+    dev: true
+
+  /rollup-plugin-node-polyfills/0.2.1:
+    resolution:
+      {
+        integrity: sha512-4kCrKPTJ6sK4/gLL/U5QzVT8cxJcofO0OU74tnB19F40cmuAKSzH5/siithxlofFEjwvw1YAhPmbvGNA6jEroA==,
+      }
+    dependencies:
+      rollup-plugin-inject: 3.0.2
+    dev: true
+
+  /rollup-pluginutils/2.8.2:
+    resolution:
+      {
+        integrity: sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==,
+      }
+    dependencies:
+      estree-walker: 0.6.1
     dev: true
 
   /rollup/3.23.0:
@@ -3813,16 +3916,6 @@ packages:
     engines: { node: ">=0.10.0" }
     dev: false
 
-  /source-map-support/0.5.21:
-    resolution:
-      {
-        integrity: sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==,
-      }
-    dependencies:
-      buffer-from: 1.1.2
-      source-map: 0.6.1
-    dev: true
-
   /source-map/0.5.7:
     resolution:
       {
@@ -3831,12 +3924,12 @@ packages:
     engines: { node: ">=0.10.0" }
     dev: false
 
-  /source-map/0.6.1:
+  /sourcemap-codec/1.4.8:
     resolution:
       {
-        integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==,
+        integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==,
       }
-    engines: { node: ">=0.10.0" }
+    deprecated: Please use @jridgewell/sourcemap-codec instead
     dev: true
 
   /statuses/2.0.1:
@@ -4021,20 +4114,6 @@ packages:
       }
     dev: false
 
-  /tsx/3.12.7:
-    resolution:
-      {
-        integrity: sha512-C2Ip+jPmqKd1GWVQDvz/Eyc6QJbGfE7NrR3fx5BpEHMZsEHoIxHL1j+lKdGobr8ovEyqeNkPLSKp6SCSOt7gmw==,
-      }
-    hasBin: true
-    dependencies:
-      "@esbuild-kit/cjs-loader": 2.4.2
-      "@esbuild-kit/core-utils": 3.1.0
-      "@esbuild-kit/esm-loader": 2.5.5
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: true
-
   /type-check/0.4.0:
     resolution:
       {
@@ -4128,6 +4207,19 @@ packages:
       punycode: 2.3.0
     dev: true
 
+  /util/0.12.5:
+    resolution:
+      {
+        integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==,
+      }
+    dependencies:
+      inherits: 2.0.4
+      is-arguments: 1.1.1
+      is-generator-function: 1.0.10
+      is-typed-array: 1.1.10
+      which-typed-array: 1.1.9
+    dev: false
+
   /utils-merge/1.0.1:
     resolution:
       {
@@ -4214,6 +4306,21 @@ packages:
       }
     dependencies:
       loose-envify: 1.4.0
+    dev: false
+
+  /which-typed-array/1.1.9:
+    resolution:
+      {
+        integrity: sha512-w9c4xkx6mPidwp7180ckYWfMmvxpjlZuIudNtDf4N/tTAUB8VJbX25qZoAsrtGuYNnGw3pa0AXgbGKRB8/EceA==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      available-typed-arrays: 1.0.5
+      call-bind: 1.0.2
+      for-each: 0.3.3
+      gopd: 1.0.1
+      has-tostringtag: 1.0.0
+      is-typed-array: 1.1.10
     dev: false
 
   /which/2.0.2:

@@ -26,6 +26,13 @@ export type PlayerType = "Player" | "Bank";
 
 export type PlayerId = `${PlayerType}_${number}`;
 
+export interface SerializablePlayerState
+  extends Omit<PlayerState, "creditLoans" | "debtLoans" | "properties"> {
+  creditLoans: LoanId[];
+  debtLoans: LoanId[];
+  properties: number[];
+}
+
 export interface PlayerState {
   position: number;
   inJail: boolean;
@@ -54,4 +61,5 @@ export interface GameState {
   loanStore: ILoanStore;
   propertyStore: IPropertyStore;
   board: IBoard;
+  started: boolean;
 }

@@ -9,14 +9,17 @@ export interface IPropertyStore {
   updateProperty(id: number, property: Partial<Property>): void;
   updateUtility(id: number, property: Partial<Utility>): void;
   updateRailroad(id: number, property: Partial<Railroad>): void;
+  withProperty<T>(id: number, fn: (property: GenericProperty) => T): T;
 }
 export interface ILoanStore {
   all(): ILoan[];
-  add(loan: ILoan): void;
+  set(loan: ILoan): void;
   get(id: LoanId): ILoan;
+  withLoan<T>(id: LoanId, fn: (loan: ILoan) => T): T;
 }
 
 export interface IPlayerStore {
-  add(player: IPlayer): void;
+  set(player: IPlayer): void;
   get(id: PlayerId): IPlayer;
+  withPlayer<T>(id: PlayerId, fn: (player: IPlayer) => T): T;
 }
