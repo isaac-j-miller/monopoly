@@ -13,6 +13,7 @@ import {
   PayBankEvent,
 } from "common/events/types";
 import { createLoanFromQuote } from "common/loan";
+import { validateNumberIsNotNaN } from "common/util";
 
 export class PlayerBase {
   protected game!: IGame;
@@ -93,9 +94,17 @@ export class PlayerBase {
   }
   addCash(amount: number): void {
     this.state.cashOnHand += amount;
+    validateNumberIsNotNaN(
+      this.state.cashOnHand,
+      `${this.id} cashOnHand is invalid; tried to add ${amount}`
+    );
   }
   subtractCash(amount: number): void {
     this.state.cashOnHand -= amount;
+    validateNumberIsNotNaN(
+      this.state.cashOnHand,
+      `${this.id} cashOnHand is invalid; tried to subtract ${amount}`
+    );
   }
   addCreditLoan(id: LoanId): void {
     this.state.creditLoans.add(id);
@@ -160,7 +169,7 @@ export class PlayerBase {
       type: EventType.LoanCreation,
       loan: createLoanFromQuote(quote),
     };
-    this.game!.processEvent(event);
+    this.game.processEvent(event);
   }
   makeLoanToOtherPlayer(quote: LoanQuote): void {
     if (quote.creditor !== this.id) {
@@ -170,7 +179,7 @@ export class PlayerBase {
       type: EventType.LoanCreation,
       loan: createLoanFromQuote(quote),
     };
-    this.game!.processEvent(event);
+    this.game.processEvent(event);
   }
   protected recalculateCreditRating() {
     // TODO: implement
@@ -188,6 +197,7 @@ export class PlayerBase {
     return netWorth;
   }
   public recalculateValues(): void {
+    console.log(`Recalculating values for ${this.id}...`);
     this.recalculateCreditRating();
     this.recalculateCreditRatingLendingThreshold();
     this.getNetWorth();
@@ -222,7 +232,10 @@ export class PlayerBase {
     for await (const player of players) {
       const offer = await player.getLoanQuoteForPlayer(this.id, amount);
       if (offer) {
+        console.log(`Got loan offer from ${player.id}`);
         quotes.push(offer);
+      } else {
+        console.log(`${player.id} declined to offer a loan`);
       }
     }
     return quotes;

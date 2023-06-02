@@ -1,8 +1,9 @@
 import React from "react";
-import { SocketProps } from "./socket-props";
 import styled from "@emotion/styled";
-import { BoardSize, GenericPosition } from "./board-components/generic";
+import { SocketProps } from "./socket-props";
+import { GenericPosition } from "./board-components/generic";
 import { getPositionComponent } from "./board-components/get-component";
+import { BoardSize } from "./board-components/board-size";
 
 export type GameBoardProps = SocketProps & {
   counter: number;
@@ -18,6 +19,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ socket, counter }) => {
     [socket.state.board.positions.length]
   );
 
+  console.debug(`board render #${counter}`);
   return (
     <BoardBox
       style={{

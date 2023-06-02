@@ -8,7 +8,7 @@ import { EventBus } from "common/events/bus";
 import { SocketStateUpdate } from "common/state/socket";
 import { Board } from "common/board/board";
 import { PlayerStore } from "common/store/player-store";
-import { RuntimeConfig } from "common/config/types";
+import { HumanOrComputerPlayerType, RuntimeConfig } from "common/config/types";
 import { getRuntimeConfig } from "common/config";
 import { LoanStore } from "common/store/loan-store";
 import { Loan } from "common/loan";
@@ -17,6 +17,8 @@ import { PropertyStore } from "common/store/property-store";
 import { NoopDecisionMaker } from "common/decision-maker/noop";
 import { HumanRemoteInterface } from "./human-interface";
 import { Bank } from "common/player/bank";
+import { ReadOnlyGame } from "./read-only-game";
+import { GameConfig, IGame } from "common/game/types";
 
 export class SocketInterface {
   private _initialized = false;
@@ -24,6 +26,8 @@ export class SocketInterface {
   private bus!: EventBus;
   private config: RuntimeConfig;
   public humanInterface!: HumanRemoteInterface;
+  private gameConfig!: GameConfig;
+  private game!: IGame;
   constructor(
     readonly socket: Socket,
     private key: SerializedGamePlayer,
@@ -60,6 +64,7 @@ export class SocketInterface {
     const propertyStore = new PropertyStore(board);
     const loanStore = new LoanStore(Object.values(state.loans).map(loan => new Loan(loan)));
     const playerStore = new PlayerStore([]);
+    const computerPlayers: PlayerId[] = [];
     Object.entries(state.players).forEach(
       ([id, { creditLoans, debtLoans, properties, ...rest }]) => {
         const Cotr = id.startsWith("Player_") ? Player : Bank;
@@ -70,11 +75,15 @@ export class SocketInterface {
           properties: new Set(properties),
         });
         playerStore.set(player);
+        if (player.type === HumanOrComputerPlayerType.Computer) {
+          computerPlayers.push(player.id);
+        }
       }
     );
     const initialState: GameState = {
       board,
       propertyStore,
+      // TODO: implement cards
       chanceCards: [],
       communityChestCards: [],
       currentPlayerTurn: state.currentPlayerTurn,
@@ -85,6 +94,12 @@ export class SocketInterface {
       started: state.started,
     };
     this.bus = new EventBus(this.config, initialState, []);
+    const gameConfig: GameConfig = {
+      initialState,
+      gameId: this.gameId,
+      computerPlayers,
+    };
+    this.gameConfig = gameConfig;
   }
   async setup() {
     if (this._initialized) {
@@ -102,16 +117,20 @@ export class SocketInterface {
     await this.getInitialState();
     console.log("got initial state");
     this.socket.on("GAME_EVENT", this.processEvent);
+    this.game = new ReadOnlyGame(this.gameConfig, () => this.state);
     this.humanInterface = new HumanRemoteInterface(
+      this.config,
       this.socket,
       this.counter,
       this.incrementCounter,
       () => this.state,
       this.playerId
     );
+    this.state.playerStore.withPlayer(this.playerId, player => player.register(this.game));
     this.humanInterface.setup();
     this._initialized = true;
     this.setReadyState(true);
+    // for debugging state only
     (window as any).getState = () => this.state;
   }
 }

@@ -23,3 +23,8 @@ export function isPromise(x: unknown): x is Promise<unknown> {
   const then = (x as any)?.then;
   return typeof then === "function";
 }
+export function validateNumberIsNotNaN(number: number, message?: string) {
+  if (Number.isNaN(number)) {
+    throw new Error(message ?? "Expected number to not be NaN");
+  }
+}

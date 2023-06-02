@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "run-cli": "clear && node --require ts-node/register --require tsconfig-paths/register ./src/host/cli.ts",
-    "start": "zsh ./scripts/start.sh",
-    "check-ts": "bash ./node_modules/.bin/tsc --noEmit",
-    "prettier": "bash ./node_modules/.bin/prettier --write .",
-    "prettier-check": "bash ./node_modules/.bin/prettier  --check .",
+    "start": "sh ./scripts/start.sh",
+    "check-ts": "sh ./node_modules/.bin/tsc --noEmit",
+    "prettier": "sh ./node_modules/.bin/prettier --write .",
+    "prettier-check": "sh ./node_modules/.bin/prettier  --check .",
     "check-node-version": "node -v",
     "test": "zsh ./scripts/test.sh"
   },
@@ -16,7 +16,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@types/express": "^4.17.17",
     "@types/node": "20",
     "@types/react": "^18.2.7",
@@ -24,9 +23,7 @@
     "@types/react-router-dom": "^5.3.3",
     "esbuild": "^0.17.18",
     "eslint": "^8.40.0",
-    "node-modules-polyfill": "link:@types/@esbuild-plugins/node-modules-polyfill",
     "prettier": "^2.8.8",
-    "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^5.0.4"
   },
   "dependencies": {
@@ -37,7 +34,6 @@
     "@blueprintjs/table": "^4.10.7",
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@vitejs/plugin-react": "^4.0.0",
     "axios": "^1.4.0",
     "chalk": "^4.1.2",
@@ -51,7 +47,6 @@
     "string-width": "^4.2.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "util": "^0.12.5",
     "vite": "^4.3.9",
     "vite-tsconfig-paths": "^4.2.0"
   }

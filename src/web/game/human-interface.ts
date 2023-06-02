@@ -6,6 +6,7 @@ import {
   DecisionMakerTaskEvent,
   DecisionMakerTaskEventResponseType,
 } from "common/shared/types";
+import { RuntimeConfig } from "common/config/types";
 
 const defaultTask: DecisionMakerTaskEvent<DecisionMakerTask> = {
   taskType: DecisionMakerTask.None,
@@ -16,6 +17,7 @@ export class HumanRemoteInterface {
   private currentTask: DecisionMakerTaskEvent<DecisionMakerTask>;
   private index: number;
   constructor(
+    readonly config: RuntimeConfig,
     private readonly socket: Socket,
     private readonly socketCounter: () => number,
     private readonly incrementCounter: () => void,
@@ -45,7 +47,9 @@ export class HumanRemoteInterface {
       this.incrementCounter();
     });
   }
-  completeCurrentTask(response: DecisionMakerTaskEventResponseType) {
+  completeCurrentTask<T extends DecisionMakerTask>(
+    response: DecisionMakerTaskEventResponseType[T]
+  ) {
     if (this.currentTask.id === defaultTask.id) {
       return;
     }

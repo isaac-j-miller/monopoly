@@ -1,7 +1,7 @@
 import { GameEvent } from "common/events/types";
 import { LoanQuote } from "common/loan/types";
 import type { IPlayer } from "common/player/types";
-import { GameState } from "common/state/types";
+import { GameState, PlayerId } from "common/state/types";
 
 export type EventHook = (event: GameEvent) => void;
 
@@ -21,4 +21,5 @@ export interface IGame {
 export type GameConfig = {
   initialState: GameState;
   gameId: string;
+  computerPlayers: PlayerId[];
 };

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
-import { BoardSize } from "./generic";
 import assert from "node:assert";
+import { BoardSize } from "./board-size";
 
 describe("BoardSize", () => {
   const boardSize = new BoardSize(40);

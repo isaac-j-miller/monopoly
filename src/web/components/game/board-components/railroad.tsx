@@ -15,6 +15,7 @@ export const RailroadPosition: React.FC<PositionInnerProps> = ({ emojiBox, posit
       <div>{property.name}</div>
       {emojiBox}
       <div>${property.basePrice}</div>
+      {property.owner !== "Bank_0" && <div>Owner: {property.owner}</div>}
     </PositionBaseDiv>
   );
 };

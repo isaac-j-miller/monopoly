@@ -147,7 +147,17 @@ export class SocketIOHumanDecisionMaker extends DecisionMakerBase implements IDe
     });
   }
   async decideToBuyPropertyFromBank(): Promise<boolean> {
-    return false;
+    const event: DecisionMakerTaskEvent<DecisionMakerTask.DecideToBuyCurrentPropertyFromBank> = {
+      event: null,
+      taskType: DecisionMakerTask.DecideToBuyCurrentPropertyFromBank,
+      id: getUniqueId(),
+    };
+    this.socket.socket.emit("SET_DECISION_MAKER_TASK", event);
+    return new Promise<boolean>(resolve => {
+      this.socket.socket.once(`CLOSE_DECISION_MAKER_TASK_${event.id}`, (answer: boolean) => {
+        resolve(answer);
+      });
+    });
   }
   setup() {}
 }

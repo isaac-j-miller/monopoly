@@ -50,9 +50,10 @@ export class Player extends PlayerBase implements IPlayer {
     this.decisionMaker.register(game, this);
   }
   async takeTurn(): Promise<void> {
-    // TODO: move based on roll and whether in jail or not,
+    console.debug(`${this.id} taking turn ${this.game.state.turn}...`);
     if (this.inJail) {
       if (this.state.getOutOfJailFreeCards > 0) {
+        console.debug(`${this.id} deciding whether to use get out of jail free card...`);
         const shouldUseCard = await this.decisionMaker.decideToUseGetOutOfJailFreeCard();
         if (shouldUseCard) {
           const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
@@ -63,6 +64,7 @@ export class Player extends PlayerBase implements IPlayer {
           this.game.processEvent(useCard);
         }
       } else {
+        console.debug(`${this.id} deciding whether to pay to get out of jail...`);
         const shouldPay = await this.decisionMaker.decideToPayToGetOutOfJail();
         if (shouldPay) {
           const useCard: Omit<GetOutOfJailEvent, "turn" | "order"> = {
@@ -88,11 +90,11 @@ export class Player extends PlayerBase implements IPlayer {
       case PositionType.Chance:
       case PositionType.CommunityChest:
       case PositionType.GoToJail:
-        break;
       case PositionType.Jail:
         break;
       case PositionType.Tax: {
         const { baseAmount } = boardPosition as BoardPosition<PositionType.Tax>;
+        console.debug(`${this.id} deciding whether how to pay tax...`);
         await this.handleFinanceOption(baseAmount, "Tax");
         break;
       }
@@ -105,6 +107,7 @@ export class Player extends PlayerBase implements IPlayer {
         const property = this.game.state.propertyStore.get(propertyId);
         const owner = this.game.state.playerStore.get(property.owner);
         if (owner.isBank) {
+          console.debug(`${this.id} deciding whether to buy ${property.name} from the bank...`);
           const shouldBuy = await this.decisionMaker.decideToBuyPropertyFromBank();
           if (!shouldBuy) {
             break;
@@ -120,6 +123,9 @@ export class Player extends PlayerBase implements IPlayer {
           break;
         } else {
           const amountPaid = this.getRentAmount(property);
+          console.debug(
+            `${this.id} deciding how to pay rent for ${property.name} to ${owner.id}...`
+          );
           await this.handleFinanceOption(amountPaid, "Rent Payment");
         }
         break;
@@ -136,16 +142,43 @@ export class Player extends PlayerBase implements IPlayer {
       loanPaymentsTotal += nominalPaymentAmount;
     });
     if (loanPaymentsTotal > 0) {
+      console.debug(
+        `${
+          this.id
+        } deciding how to cover loan payments amounting to ${loanPaymentsTotal.toLocaleString(
+          "en-US",
+          {
+            currency: "usd",
+          }
+        )}...`
+      );
       await this.handleFinanceOption(loanPaymentsTotal, "Loan Payments");
     }
     // if we have a negative cash balance, cover it before continuing with optional actions
     if (this.cashOnHand < 0) {
+      console.debug(
+        `${this.id} deciding how to cover cash shortfall of ${loanPaymentsTotal.toLocaleString(
+          "en-US",
+          {
+            currency: "usd",
+          }
+        )}...`
+      );
       await this.decisionMaker.coverCashOnHandShortfall();
     }
     // now all the necessary stuff is out of the way, we can now make offers to players/pay extra on debts/upgrade property/etc. this is done in the decisionMaker.doOptionalActions() method
+    console.debug(`${this.id} deciding on additional actions...`);
     await this.decisionMaker.doOptionalActions();
     // must cover shortfall if exists before ending turn
     if (this.cashOnHand < 0) {
+      console.debug(
+        `${this.id} deciding how to cover cash shortfall of ${loanPaymentsTotal.toLocaleString(
+          "en-US",
+          {
+            currency: "usd",
+          }
+        )}...`
+      );
       await this.decisionMaker.coverCashOnHandShortfall();
     }
   }

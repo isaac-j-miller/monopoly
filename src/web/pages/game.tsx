@@ -14,8 +14,12 @@ export const Game: React.FC = () => {
   const { id } = useParams<{ id: SerializedGamePlayer }>();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
-  const [counter, setCounter] = React.useState(0);
-  const incrementCounter = () => setCounter(counter + 1);
+  const [counter, setCounter] = React.useState<number>(0);
+  const incrementCounter = () => {
+    setCounter(c => {
+      return c + 1;
+    });
+  };
   const onDisconnect = () => {
     const idx = window.location.href.indexOf("/game/");
     const newHref = window.location.href.slice(0, idx);
@@ -30,7 +34,7 @@ export const Game: React.FC = () => {
       query: { id },
     });
     const si = new SocketInterface(s, id, setReady, () => counter, incrementCounter, onDisconnect);
-    void si.setup().catch();
+    void si.setup();
     return si;
   }, [id]);
 
@@ -45,14 +49,10 @@ export const Game: React.FC = () => {
       </Navbar>
       {ready ? (
         <HorizontalDiv>
-          <ControlPanel remote={socket.humanInterface} counter={socket.humanInterface.counter} />
-          <GameBoard socket={socket} counter={socket.humanInterface.counter} />
+          <ControlPanel remote={socket.humanInterface} counter={counter} />
+          <GameBoard socket={socket} counter={counter} />
           <Drawer onClose={() => setDrawerOpen(false)} isOpen={drawerOpen}>
-            <Panel
-              counter={socket.humanInterface.counter}
-              socket={socket}
-              playerId={socket.playerId}
-            ></Panel>
+            <Panel counter={counter} socket={socket} playerId={socket.playerId}></Panel>
           </Drawer>
         </HorizontalDiv>
       ) : (

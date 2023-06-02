@@ -18,8 +18,8 @@ const DiceBox = styled.span`
   flex-direction: row;
 `;
 const Dice = styled.span`
-  width: 4em;
-  height: 4em;
+  width: 2em;
+  height: 2em;
   margin: 0.5em;
   font-size: 150%;
   border: 1px solid black;
@@ -32,7 +32,7 @@ const Dice = styled.span`
 const RollDisplay: React.FC<{ roll: [number, number] }> = ({ roll }) => {
   return (
     <VerticalDiv>
-      <h3 className="bp4-heading">Most Recent Roll</h3>
+      <h4 className="bp4-heading">Most Recent Roll</h4>
       <DiceBox>
         <Dice>{roll[0]}</Dice>
         <Dice>{roll[1]}</Dice>
@@ -42,19 +42,23 @@ const RollDisplay: React.FC<{ roll: [number, number] }> = ({ roll }) => {
 };
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({ remote }) => {
-  const { playerId, player } = remote;
+  const { player } = remote;
   const task = remote.getTask();
-  const taskComponent = getTaskComponent(task);
+  const taskComponent = getTaskComponent(task, remote);
+  const currentPosition = remote.gameState().board.positions[player.position];
   return (
     <Card>
       <VerticalDiv>
         <HorizontalDiv>
           <h2 className="bp4-heading">Control Panel</h2>
-          <Button onClick={() => remote.startGame()} disabled={remote.isStarted()}>
-            Start Game
-          </Button>
+          {!remote.isStarted() && <Button onClick={() => remote.startGame()}>Start Game</Button>}
         </HorizontalDiv>
-        {remote.isCurrentPlayerTurn() && <h3 className="bp4-header">It is your turn</h3>}
+        {remote.isCurrentPlayerTurn() && (
+          <>
+            <h3 className="bp4-header">It is your turn.</h3>
+            <h4 className="bp4-header">You are on {currentPosition.name}</h4>
+          </>
+        )}
         {player.mostRecentRoll && <RollDisplay roll={player.mostRecentRoll} />}
         <p>
           Cash on Hand: $

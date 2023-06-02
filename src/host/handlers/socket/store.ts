@@ -101,6 +101,9 @@ export class GameStore {
     return {
       gameId,
       initialState,
+      computerPlayers: players
+        .filter(p => p.type === HumanOrComputerPlayerType.Computer)
+        .map(p => p.id),
     };
   }
   createGame(params: GameConfigParams): string {
@@ -115,6 +118,9 @@ export class GameStore {
     };
     this.games[config.gameId] = entry;
     display.register();
+    config.computerPlayers.forEach(playerId => {
+      game.state.playerStore.withPlayer(playerId, player => player.register(game));
+    });
     return config.gameId;
   }
   registerPlayer(gameId: string, playerId: PlayerId, socket: GameSocket, state: PlayerState) {
