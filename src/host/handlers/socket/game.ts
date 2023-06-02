@@ -11,6 +11,7 @@ export class GameSocket {
   readonly gameId: string;
   readonly playerId: PlayerId | null;
   private display!: SocketIOGameDisplay;
+  public isDone: boolean;
   constructor(
     private readonly config: RuntimeConfig,
     private readonly gameStore: GameStore,
@@ -22,6 +23,7 @@ export class GameSocket {
     this.gameId = gameId;
     // TODO: validate PlayerId
     this.playerId = playerId as PlayerId;
+    this.isDone = false;
   }
   setup() {
     this.gameStore.withGame(this.gameId, game => {
@@ -55,7 +57,18 @@ export class GameSocket {
         player.register(game);
       });
       this.socket.once("START_GAME", () => {
-        game.start();
+        game
+          .start()
+          .then(() => {
+            this.isDone = true;
+          })
+          .catch(err => {
+            console.error(err);
+            this.disconnect();
+          })
+          .finally(() => {
+            // this.gameStore.delete(this.gameId)
+          });
       });
     });
   }

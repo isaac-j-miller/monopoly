@@ -1,5 +1,5 @@
 import type { PositionType } from "common/board/types";
-import type { ILoan, LoanId } from "common/loan/types";
+import type { ILoan, LoanId, LoanState } from "common/loan/types";
 import type { PropertyLevel } from "common/property/types";
 import type { PlayerId } from "common/state/types";
 
@@ -29,6 +29,9 @@ export enum EventType {
   BankPayPlayer,
   StartGame,
   StartPlayerTurn,
+  NullifyLoan,
+  PlayerVictory,
+  PlayerPassGo,
 }
 
 export enum PayBankReason {
@@ -76,8 +79,9 @@ interface LoanEvent {
 }
 export interface LoanPaymentEvent extends Event<EventType.LoanPayment>, Payment, LoanEvent {}
 export interface LoanCreationEvent extends Event<EventType.LoanCreation> {
-  loan: ILoan;
+  loan: LoanState;
 }
+export interface NullifyLoanEvent extends Event<EventType.NullifyLoan>, LoanEvent {}
 export interface LoanTransferEvent extends Event<EventType.LoanTransfer>, Payment, LoanEvent {
   originalCreditor: PlayerId;
   newCreditor: PlayerId;
@@ -110,7 +114,7 @@ export interface PlayerDeclareBankruptcyEvent
 
 export interface StartPlayerTurnEvent extends Event<EventType.StartPlayerTurn>, PlayerEvent {}
 export interface CompletePlayerTurnEvent extends Event<EventType.CompletePlayerTurn>, PlayerEvent {}
-
+export interface PlayerPassGoEvent extends Event<EventType.PlayerPassGo>, PlayerEvent {}
 export interface CompleteTurnEvent extends Event<EventType.CompleteTurn> {}
 
 export interface PayBankEvent extends Event<EventType.PayBank>, PlayerEvent, Payment {
@@ -126,7 +130,7 @@ export interface DrawCommunityChestCardEvent
     PlayerEvent {
   // TODO: do something with this
 }
-
+export interface PlayerVictoryEvent extends Event<EventType.PlayerVictory>, PlayerEvent {}
 export interface GoToJailEvent extends Event<EventType.GoToJail>, PlayerEvent {}
 
 export interface GetOutOfJailEvent extends Event<EventType.GetOutOfJail>, PlayerEvent {
@@ -179,6 +183,9 @@ export type EventTypeMap = {
   [EventType.BankPayPlayer]: BankPayPlayerEvent;
   [EventType.StartGame]: StartGameEvent;
   [EventType.StartPlayerTurn]: StartPlayerTurnEvent;
+  [EventType.NullifyLoan]: NullifyLoanEvent;
+  [EventType.PlayerVictory]: PlayerVictoryEvent;
+  [EventType.PlayerPassGo]: PlayerPassGoEvent;
 };
 
 export type GameEvent = EventTypeMap[EventType];

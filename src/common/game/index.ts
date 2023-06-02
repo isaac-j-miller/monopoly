@@ -8,11 +8,12 @@ import {
   EventType,
   GameEvent,
   LoanCreationEvent,
+  PlayerVictoryEvent,
   RollEvent,
   StartPlayerTurnEvent,
 } from "common/events/types";
 import { PlayerId } from "common/state/types";
-import { createLoanFromQuote } from "common/loan";
+import { createLoanStateFromQuote } from "common/loan";
 import { LoanQuote } from "common/loan/types";
 import { sleep } from "common/util";
 import { EventHook, GameConfig, IGame } from "./types";
@@ -53,7 +54,6 @@ export class Game implements IGame {
     return true;
   }
   addPlayer(player: IPlayer): void {
-    const idx = this.players.findIndex(p => p.id === player.id);
     this.state.playerStore.set(player);
     if (this.state.playerTurnOrder.includes(player.id)) {
       return;
@@ -62,7 +62,7 @@ export class Game implements IGame {
   }
   createLoan(quote: LoanQuote) {
     const event: LoanCreationEvent = {
-      loan: createLoanFromQuote(quote),
+      loan: createLoanStateFromQuote(quote),
       order: this.state.currentPlayerTurn,
       turn: this.state.turn,
       type: EventType.LoanCreation,
@@ -85,13 +85,21 @@ export class Game implements IGame {
     this.processEvent({
       type: EventType.StartGame,
     });
-    while (config.turnLimit === null || this.turn < config.turnLimit) {
+
+    while (
+      (config.runtime.turnLimit === null || this.turn < config.runtime.turnLimit) &&
+      !this.state.isDone
+    ) {
       await this.takeTurn();
     }
+    console.debug("Game complete.");
   }
   async takeTurn(): Promise<void> {
     const { players } = this;
     for await (const player of players) {
+      if (this.state.isDone) {
+        break;
+      }
       await this.takePlayerTurn(player);
     }
     const endTurnEvent: CompleteTurnEvent = {

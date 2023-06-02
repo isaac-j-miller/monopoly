@@ -34,6 +34,13 @@ export class Loan implements ILoan {
   get debtor(): PlayerId {
     return this.state.debtor;
   }
+  get nullified(): boolean {
+    return this.state.nullified;
+  }
+  nullify(): void {
+    this.state.remainingPrincipal = 0;
+    this.state.remainingInterest = 0;
+  }
   getFaceValue(): number {
     const normalPaymentAmount = this.getNominalPaymentAmount();
     const remaining = this.getCurrentBalance();
@@ -80,9 +87,9 @@ export function getNominalPaymentAmount(
   return totalAmountDue / term;
 }
 
-export function createLoanFromQuote(quote: LoanQuote): ILoan {
+export function createLoanStateFromQuote(quote: LoanQuote): LoanState {
   const { amount, creditor, debtor, rate, rateType, term } = quote;
-  return new Loan({
+  return {
     id: getUniqueId(),
     remainingPrincipal: amount,
     initialPrincipal: amount,
@@ -92,7 +99,8 @@ export function createLoanFromQuote(quote: LoanQuote): ILoan {
     rateType,
     term,
     remainingInterest: 0,
-  });
+    nullified: false,
+  };
 }
 
 export function getLoanQuoteFaceValue(quote: LoanQuote): number {

@@ -10,7 +10,8 @@
     "prettier": "sh ./node_modules/.bin/prettier --write .",
     "prettier-check": "sh ./node_modules/.bin/prettier  --check .",
     "check-node-version": "node -v",
-    "test": "zsh ./scripts/test.sh"
+    "test": "zsh ./scripts/test.sh",
+    "test-specific": "zsh ./scripts/test-specific.sh"
   },
   "keywords": [],
   "author": "",

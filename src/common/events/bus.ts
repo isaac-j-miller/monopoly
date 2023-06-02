@@ -35,8 +35,12 @@ import {
   BankPayPlayerEvent,
   StartGameEvent,
   StartPlayerTurnEvent,
+  NullifyLoanEvent,
+  PlayerVictoryEvent,
+  PlayerPassGoEvent,
 } from "./types";
 import { determineRentPaymentAmount } from "./util";
+import { Loan } from "common/loan";
 
 type GameStateAndEventsObject = {
   initialState: GameState;
@@ -74,7 +78,6 @@ export class EventBus {
     this.eventHooks.forEach(hook => {
       hook(event);
     });
-    // console.debug("new state", this.state)
   }
   private handleStateUpdate(event: GameEvent) {
     switch (event.type) {
@@ -128,9 +131,33 @@ export class EventBus {
         return this.processRoll(event);
       case EventType.StartGame:
         return this.processStartGame(event);
+      case EventType.NullifyLoan:
+        return this.processNullifyLoan(event);
+      case EventType.PlayerVictory:
+        return this.processPlayerVictory(event);
+      case EventType.PlayerPassGo:
+        return this.processPlayerPassGo(event);
       default:
         assertNever(event);
     }
+  }
+  private processPlayerPassGo(event: PlayerPassGoEvent) {
+    this.state.playerStore.withPlayer(event.player, player =>
+      player.addCash(this.config.runtime.passGoAmount)
+    );
+  }
+  private processPlayerVictory(event: PlayerVictoryEvent) {
+    this.state.isDone = true;
+    console.log(`${event.player} has won on turn ${this.state.turn}!`);
+  }
+  private processNullifyLoan(event: NullifyLoanEvent) {
+    const { loanId } = event;
+    this.currentState.loanStore.withLoan(loanId, loan => {
+      loan.nullify();
+      const { creditor, debtor } = loan;
+      this.currentState.playerStore.withPlayer(creditor, player => player.removeCreditLoan(loanId));
+      this.currentState.playerStore.withPlayer(debtor, player => player.removeDebtLoan(loanId));
+    });
   }
   private processStartGame(_event: StartGameEvent) {
     this.state.started = true;
@@ -156,8 +183,8 @@ export class EventBus {
     const turnOrder = this.state.playerTurnOrder.findIndex(p => p === event.player);
     this.currentState.currentPlayerTurn = turnOrder;
   }
-  private processCompletePlayerTurn(_event: CompletePlayerTurnEvent) {
-    // TODO: something?
+  private processCompletePlayerTurn(event: CompletePlayerTurnEvent) {
+    console.log(`${event.player} completed turn ${event.turn}`);
   }
   private processCompleteTurn(_event: CompleteTurnEvent) {
     this.currentState.currentPlayerTurn = 0;
@@ -169,15 +196,22 @@ export class EventBus {
   }
   private processLoanAccrueInterest(event: LoanAccrueInterestEvent) {
     const { loanId } = event;
-    const loan = this.currentState.loanStore.get(loanId);
-    loan.accrueInterest();
+    this.currentState.loanStore.withLoan(loanId, loan => loan.accrueInterest());
   }
   private processLoanCreation(event: LoanCreationEvent) {
     const { loan } = event;
     const { id } = loan;
-    this.currentState.loanStore.set(loan);
-    this.currentState.playerStore.withPlayer(loan.creditor, creditor => creditor.addCreditLoan(id));
-    this.currentState.playerStore.withPlayer(loan.debtor, debtor => debtor.addDebtLoan(id));
+    const newLoan = new Loan(loan);
+    this.currentState.loanStore.set(newLoan);
+    this.currentState.playerStore.withPlayer(loan.creditor, creditor => {
+      creditor.addCreditLoan(id);
+      creditor.subtractCash(loan.initialPrincipal);
+    });
+    this.currentState.playerStore.withPlayer(loan.debtor, debtor => {
+      debtor.addDebtLoan(id);
+      debtor.addCash(loan.initialPrincipal);
+    });
+    console.log(`Created loan with ID ${id}. creditor: ${loan.creditor}, debtor: ${loan.debtor}`);
   }
   private processLoanPayment(event: LoanPaymentEvent) {
     const { loanId, amount } = event;
@@ -295,8 +329,15 @@ export class EventBus {
     const { player: playerId, delta } = event;
     this.currentState.playerStore.withPlayer(playerId, player => {
       let newPosition = player.position + delta;
-      if (newPosition > this.currentState.board.positions.length) {
+      if (newPosition >= this.currentState.board.positions.length) {
         newPosition -= this.currentState.board.positions.length;
+        const passGoEvent: PlayerPassGoEvent = {
+          player: event.player,
+          turn: this.state.turn,
+          order: this.state.currentPlayerTurn,
+          type: EventType.PlayerPassGo,
+        };
+        this.processEvent(passGoEvent);
       }
       player.setPosition(newPosition);
     });
@@ -405,7 +446,29 @@ export class EventBus {
     this.currentState.playerStore.withPlayer(player, p => p.getOutOfJail());
   }
   private processPlayerDeclareBankruptcy(event: PlayerDeclareBankruptcyEvent) {
-    // throw new Error("Method not implemented.");
+    const idx = this.state.playerTurnOrder.findIndex(p => p === event.player);
+    const playerCount = this.state.playerTurnOrder.length;
+    this.state.playerTurnOrder = [
+      ...this.state.playerTurnOrder.slice(0, idx),
+      ...this.state.playerTurnOrder.slice(idx + 1),
+    ];
+    const newPlayerCount = this.state.playerTurnOrder.length;
+    this.state.playerStore.withPlayer(event.player, player => {
+      player.declareBankruptcy();
+    });
+    console.log(
+      `Player ${event.player} eliminated, bringing number of players from ${playerCount} to ${newPlayerCount}`
+    );
+
+    if (newPlayerCount === 1) {
+      const victoryEvent: PlayerVictoryEvent = {
+        player: this.state.playerTurnOrder[0],
+        type: EventType.PlayerVictory,
+        turn: this.state.turn,
+        order: this.state.currentPlayerTurn,
+      };
+      this.processEvent(victoryEvent);
+    }
   }
   private processDrawChanceCard(event: DrawChanceCardEvent) {
     // throw new Error("Method not implemented.");

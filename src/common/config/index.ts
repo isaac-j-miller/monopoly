@@ -42,11 +42,17 @@ export function getRuntimeConfig(): RuntimeConfig {
       duration: 3,
       getOfJailBaseCost: 50,
     },
-    minTurnDuration: 100,
+    runtime: {
+      turnLimit: 500,
+      minTurnDuration: 100,
+      maxCreditChainDepth: 3,
+      passGoAmount: 200,
+    },
     players: {
       count: 8,
       initialState: {
-        cashOnHand: 800,
+        isBankrupt: false,
+        cashOnHand: 1000,
         creditLoans: new Set(),
         creditRating: CreditRating.A,
         creditRatingLendingThreshold: CreditRating.B,
@@ -55,7 +61,7 @@ export function getRuntimeConfig(): RuntimeConfig {
         inJail: false,
         inJailSince: null,
         mostRecentRoll: null,
-        netWorth: 800,
+        netWorth: 1000,
         position: 0,
         properties: new Set(),
         emoji: "PLACEHOLDER",
@@ -64,7 +70,6 @@ export function getRuntimeConfig(): RuntimeConfig {
       },
       emojiPool: ["👨", "🤖", "🎃", "👻", "😈", "🧚‍♀️", "👽", "🤠", "🤡", "🤑"],
     },
-    turnLimit: 500,
     cli: {
       board: {
         cornerPositionSize: 15,

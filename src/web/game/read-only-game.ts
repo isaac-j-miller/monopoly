@@ -12,7 +12,7 @@ export class ReadOnlyGame implements IGame {
   addPlayer(player: IPlayer): void {
     throw new Error("Method not implemented.");
   }
-  start(): void {
+  start(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   isReady(): boolean {

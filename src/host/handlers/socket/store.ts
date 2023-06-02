@@ -30,6 +30,9 @@ export class GameStore {
   constructor(private config: RuntimeConfig, private readonly io: Server) {
     this.games = {};
   }
+  delete(id: string) {
+    delete this.games[id];
+  }
   getGame(id: string): IGame | undefined {
     return this.games[id]?.game;
   }
@@ -97,6 +100,7 @@ export class GameStore {
       propertyStore,
       board,
       started: false,
+      isDone: false,
     };
     return {
       gameId,

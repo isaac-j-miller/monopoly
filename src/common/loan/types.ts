@@ -12,6 +12,7 @@ export type LoanState = {
   remainingInterest: number;
   readonly initialPrincipal: number;
   term: number;
+  nullified: boolean;
 };
 
 export interface ILoan extends LoanState {
@@ -22,6 +23,7 @@ export interface ILoan extends LoanState {
   makePayment(amount: number): number;
   accrueInterest(): void;
   getNominalPaymentAmount(): number;
+  nullify(): void;
   toObject(): LoanState;
 }
 

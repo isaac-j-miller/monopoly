@@ -9,7 +9,7 @@ export interface IGame {
   readonly gameConfig: GameConfig;
   readonly state: GameState;
   addPlayer(player: IPlayer): void;
-  start(): void;
+  start(): Promise<void>;
   isReady(): boolean;
   takeTurn(): Promise<void>;
   takePlayerTurn(player: IPlayer): Promise<void>;

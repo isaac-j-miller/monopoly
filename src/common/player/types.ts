@@ -21,6 +21,7 @@ export interface IPlayer {
   readonly creditLoans: Set<LoanId>;
   readonly debtLoans: Set<LoanId>;
   readonly getOutOfJailFreeCards: number;
+  readonly isBankrupt: boolean;
   getState(): SerializablePlayerState;
   setMostRecentRoll(roll: [number, number]): void;
   setPosition(position: number): void;
@@ -48,8 +49,12 @@ export interface IPlayer {
     player: PlayerId,
     propertyId: number
   ): Promise<PropertyQuote | null>;
-  getLoanQuoteForPlayer(player: PlayerId, amount: number): Promise<LoanQuote | null>;
-  getLoanQuotesFromOtherPlayers(amount: number, excludePlayers?: PlayerId[]): Promise<LoanQuote[]>;
+  getLoanQuoteForPlayer(player: PlayerId, amount: number, depth: number): Promise<LoanQuote | null>;
+  getLoanQuotesFromOtherPlayers(
+    amount: number,
+    depth: number,
+    excludePlayers?: PlayerId[]
+  ): Promise<LoanQuote[]>;
   getSellPropertyQuotesFromOtherPlayers(
     propertyId: number,
     price: number
@@ -67,4 +72,5 @@ export interface IPlayer {
   sellLoan(quote: TransferLoanQuote): void;
   upgradeProperty(propertyId: number, newLevel: PropertyLevel): void;
   sellPropertyUpgrades(propertyId: number, newLevel: PropertyLevel): void;
+  declareBankruptcy(): void;
 }

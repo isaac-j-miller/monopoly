@@ -34,7 +34,7 @@ export class SocketInterface {
     private setReadyState: (state: boolean) => void,
     private counter: () => number,
     private incrementCounter: () => void,
-    private readonly onSocketDisconnect: () => void
+    private readonly onSocketDisconnect: (reason: Socket.DisconnectReason) => void
   ) {
     this.config = getRuntimeConfig();
   }
@@ -92,6 +92,7 @@ export class SocketInterface {
       playerTurnOrder: state.playerTurnOrder,
       turn: state.turn,
       started: state.started,
+      isDone: false,
     };
     this.bus = new EventBus(this.config, initialState, []);
     const gameConfig: GameConfig = {
@@ -113,7 +114,7 @@ export class SocketInterface {
     }
     this.socket.on("disconnect", reason => {
       console.log("socket disconnected", reason);
-      this.onSocketDisconnect();
+      this.onSocketDisconnect(reason);
     });
     console.log("attempting to parse key");
     await axios.get<OptionalGamePlayer>(`/api/parse-key/${this.key}`).then(resp => {
@@ -137,6 +138,9 @@ export class SocketInterface {
       this.state.playerStore.withPlayer(this.playerId, player => player.register(this.game));
       this.humanInterface.setup();
     }
+    ["Bank_0" as PlayerId, ...this.game.state.playerTurnOrder].forEach(playerId => {
+      this.game.state.playerStore.withPlayer(playerId, player => player.register(this.game));
+    });
     this._initialized = true;
     this.setReadyState(true);
     // for debugging state only

@@ -49,6 +49,7 @@ export interface PlayerState {
   riskiness: number;
   emoji: string;
   type: HumanOrComputerPlayerType;
+  isBankrupt: boolean;
 }
 
 export interface GameState {
@@ -62,4 +63,5 @@ export interface GameState {
   propertyStore: IPropertyStore;
   board: IBoard;
   started: boolean;
+  isDone: boolean;
 }

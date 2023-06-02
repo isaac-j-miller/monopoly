@@ -15,27 +15,57 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     const allPropertyProperties = this.game.state.board
       .getAllPositionsOfType(PositionType.Property)
       .filter(p => properties.has(p.propertyId));
-    allPropertyProperties.forEach(property => {
-      const { color } = property;
-      const propertiesOfColor = this.game.state.board
-        .getAllPropertiesOfColor(color)
-        .map(p => p.propertyId);
-      if (propertiesOfColor.every(id => properties.has(id))) {
-        // if we have a monopoly on this color, start upgrading
-        propertiesOfColor.forEach(propertyId => {
-          const property = this.game.state.propertyStore.get(propertyId) as Property;
-          if (property.level < PropertyLevel.Skyscraper) {
-            const upgradeCost = getUpgradeCost(property, property.level + 1);
-            if (this.player.cashOnHand > upgradeCost) {
-              this.player.upgradeProperty(property.propertyId, property.level + 1);
+    for await (const property of allPropertyProperties) {
+      {
+        const { color } = property;
+        const propertiesOfColor = this.game.state.board
+          .getAllPropertiesOfColor(color)
+          .map(p => p.propertyId);
+        if (propertiesOfColor.every(id => properties.has(id))) {
+          // if we have a monopoly on this color, start upgrading
+          propertiesOfColor.forEach(propertyId => {
+            const property = this.game.state.propertyStore.get(propertyId) as Property;
+            if (property.level < PropertyLevel.Skyscraper) {
+              const upgradeCost = getUpgradeCost(property, property.level + 1);
+              if (this.player.cashOnHand > upgradeCost) {
+                this.player.upgradeProperty(property.propertyId, property.level + 1);
+              }
+              // TODO: add some more conditions, maybe take out a loan to do this
             }
-            // TODO: add some more conditions, maybe take out a loan to do this
+          });
+        } else {
+          const nonOwnedPropertiesOfColor = propertiesOfColor.filter(
+            id => !this.player.properties.has(id)
+          );
+          if (nonOwnedPropertiesOfColor.length > 0) {
+            for await (const propertyId of nonOwnedPropertiesOfColor) {
+              const nonOwnedProperty = this.game.state.propertyStore.get(propertyId);
+              await this.game.state.playerStore.withPlayer(nonOwnedProperty.owner, async owner => {
+                if (owner.isBank) {
+                  return;
+                }
+                const quote = await owner.getPurchasePropertyQuoteForPlayer(
+                  this.player.id,
+                  propertyId
+                );
+                if (!quote) {
+                  return;
+                }
+                // TODO: do some more sophisticated calculations
+                const shouldAccept = await this.decideToAcceptPropertyQuote(quote);
+                if (shouldAccept) {
+                  this.player.purchaseProperty(quote);
+                  const loanQuote = await this.decideHowToFinancePayment(quote.offer);
+                  if (loanQuote) {
+                    this.player.takeOutLoan(loanQuote);
+                  }
+                }
+              });
+            }
           }
-        });
-      } else {
-        // TODO: try to buy some of the other properties of this color
+        }
       }
-    });
+    }
   }
   async decideToAcceptTransferLoanQuote(
     quote: TransferLoanQuote,
@@ -111,17 +141,13 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       await this.coverCashOnHandShortfallInternal(round);
       round++;
     }
-    if (this.player.cashOnHand < 0) {
-      throw new Error("figure out how to declare bankruptcy");
-      // TODO: figure out how to declare bankruptcy
-    }
   }
   async decideHowToFinancePayment(amount: number): Promise<LoanQuote | null> {
     if (
       this.player.cashOnHand < amount ||
       (this.player.creditRating >= CreditRating.AA && amount > this.player.cashOnHand * 0.5)
     ) {
-      const loanQuotes = await this.player.getLoanQuotesFromOtherPlayers(amount);
+      const loanQuotes = await this.player.getLoanQuotesFromOtherPlayers(amount, 1);
       const bestLoanQuote = loanQuotes.sort((a, b) => {
         // TODO: determine a more situationally-aware method of determining the "best" loan
         return a.rate - b.rate;
@@ -201,7 +227,11 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       return offer <= valueToAccept;
     }
   }
-  async getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null> {
+  async getLoanQuoteForPlayer(
+    playerId: PlayerId,
+    amount: number,
+    depth: number
+  ): Promise<LoanQuote | null> {
     const player = this.game.state.playerStore.get(playerId);
     const { creditRating } = player;
     const { creditRatingLendingThreshold } = this.player;
@@ -223,7 +253,9 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     };
     // TODO: add riskiness into calculation
     if (this.player.cashOnHand < amount * 2) {
-      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(amount, [playerId]);
+      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(amount, depth + 1, [
+        playerId,
+      ]);
       const bestLoanOffer = loanOffers.sort(
         (a, b) => getLoanQuoteFaceValue(a) - getLoanQuoteFaceValue(b)
       )[0];
@@ -278,7 +310,7 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       if (quote.offer < this.player.cashOnHand) {
         return true;
       }
-      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(quote.offer);
+      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(quote.offer, 0);
       if (loanOffers.length > 0) {
         return true;
       }

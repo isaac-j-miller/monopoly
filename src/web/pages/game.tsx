@@ -1,6 +1,6 @@
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import React, { useMemo } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alignment, Button, Drawer, Navbar, Spinner } from "@blueprintjs/core";
 import type { SerializedGamePlayer } from "common/shared/types";
 import { SocketInterface } from "../game/socket-interface";
@@ -22,8 +22,10 @@ export const Game: React.FC = () => {
       return c + 1;
     });
   };
-  const onDisconnect = () => {
-    navigate("/");
+  const onDisconnect = (reason: Socket.DisconnectReason) => {
+    if (reason === "io server disconnect") {
+      navigate("/");
+    }
   };
   const socket = useMemo(() => {
     if (!id) {

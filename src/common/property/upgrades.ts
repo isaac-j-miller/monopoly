@@ -2,21 +2,21 @@ import { Property, PropertyLevel } from "common/property/types";
 
 const defaultLevelValuesMultipliers: Record<PropertyLevel, number> = {
   [PropertyLevel.Unimproved]: 1,
-  [PropertyLevel.OneHouse]: 1.2,
-  [PropertyLevel.TwoHouses]: 1.5,
-  [PropertyLevel.ThreeHouses]: 1.75,
-  [PropertyLevel.FourHouses]: 2,
-  [PropertyLevel.Hotel]: 3,
-  [PropertyLevel.Skyscraper]: 6,
+  [PropertyLevel.OneHouse]: 2,
+  [PropertyLevel.TwoHouses]: 3,
+  [PropertyLevel.ThreeHouses]: 4,
+  [PropertyLevel.FourHouses]: 5,
+  [PropertyLevel.Hotel]: 7,
+  [PropertyLevel.Skyscraper]: 10,
 };
 const defaultLevelRentsMultipliers: Record<PropertyLevel, number> = {
   [PropertyLevel.Unimproved]: 1,
-  [PropertyLevel.OneHouse]: 1.2,
-  [PropertyLevel.TwoHouses]: 1.4,
-  [PropertyLevel.ThreeHouses]: 1.6,
-  [PropertyLevel.FourHouses]: 1.8,
-  [PropertyLevel.Hotel]: 2.5,
-  [PropertyLevel.Skyscraper]: 4,
+  [PropertyLevel.OneHouse]: 5,
+  [PropertyLevel.TwoHouses]: 15,
+  [PropertyLevel.ThreeHouses]: 45,
+  [PropertyLevel.FourHouses]: 80,
+  [PropertyLevel.Hotel]: 125,
+  [PropertyLevel.Skyscraper]: 375,
 };
 
 export const defaultRailroadQuantityRents: Record<number, number> = {

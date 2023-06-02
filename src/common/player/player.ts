@@ -3,9 +3,15 @@ import { BoardPosition, PositionType } from "common/board/types";
 import { assertIsDefined, assertNever } from "common/util";
 import {
   EventType,
+  GameEvent,
   GetOutOfJailEvent,
   GetOutOfJailReason,
+  LoanTransferEvent,
+  NullifyLoanEvent,
+  PlayerDeclareBankruptcyEvent,
   PlayerMoveEvent,
+  PropertyDowngradeEvent,
+  PropertyTransferEvent,
   PropertyUpgradeEvent,
   RentPaymentEvent,
 } from "common/events/types";
@@ -13,6 +19,7 @@ import { Property, PropertyLevel, Railroad, Utility } from "common/property/type
 import { determineRentPaymentAmount } from "common/events/util";
 import { IPlayer } from "./types";
 import { PlayerBase } from "./base";
+import { PlayerId } from "common/state/types";
 
 export class Player extends PlayerBase implements IPlayer {
   upgradeProperty(propertyId: number, newLevel: PropertyLevel): void {
@@ -46,6 +53,9 @@ export class Player extends PlayerBase implements IPlayer {
     return false;
   }
   register(game: IGame) {
+    if (this.isRegistered) {
+      return;
+    }
     this.game = game;
     this.decisionMaker.register(game, this);
   }
@@ -136,10 +146,11 @@ export class Player extends PlayerBase implements IPlayer {
 
     let loanPaymentsTotal = 0;
     this.state.debtLoans.forEach(loanId => {
-      const loan = this.game.state.loanStore.get(loanId);
-      const nominalPaymentAmount = loan.getNominalPaymentAmount();
-      loan.makePayment(nominalPaymentAmount);
-      loanPaymentsTotal += nominalPaymentAmount;
+      this.game.state.loanStore.withLoan(loanId, loan => {
+        const nominalPaymentAmount = loan.getNominalPaymentAmount();
+        loan.makePayment(nominalPaymentAmount);
+        loanPaymentsTotal += nominalPaymentAmount;
+      });
     });
     if (loanPaymentsTotal > 0) {
       console.debug(
@@ -181,6 +192,64 @@ export class Player extends PlayerBase implements IPlayer {
       );
       await this.decisionMaker.coverCashOnHandShortfall();
     }
+    if (this.cashOnHand < 0) {
+      // must declare bankruptcy
+      this.declareBankruptcyInternal();
+    }
+  }
+  declareBankruptcy(): void {
+    console.log(`${this.id} has declared bankruptcy!`);
+    this.debtLoans.forEach(loanId => {
+      const event: Omit<NullifyLoanEvent, "turn" | "order"> = {
+        loanId,
+        type: EventType.NullifyLoan,
+      };
+      this.game.processEvent(event);
+    });
+    this.creditLoans.forEach(loanId => {
+      const event: Omit<LoanTransferEvent, "turn" | "order"> = {
+        loanId,
+        type: EventType.LoanTransfer,
+        amount: 0,
+        newCreditor: "Bank_0" as PlayerId,
+        originalCreditor: this.id,
+      };
+      this.game.processEvent(event);
+    });
+    this.properties.forEach(propertyId => {
+      const property = this.game.state.propertyStore.get(propertyId);
+      if (property.propertyType === PositionType.Property && property.level > 0) {
+        const downgradeEvent: Omit<PropertyDowngradeEvent, "turn" | "order"> = {
+          propertyId,
+          newLevel: 0,
+          type: EventType.PropertyDowngrade,
+        };
+        this.game.processEvent(downgradeEvent);
+      }
+      const sellEvent: Omit<PropertyTransferEvent, "turn" | "order"> = {
+        type: EventType.PropertyTransfer,
+        propertyType: property.propertyType,
+        propertyId,
+        amount: 0,
+        from: this.id,
+        to: "Bank_0" as PlayerId,
+      };
+      this.game.processEvent(sellEvent);
+    });
+    this.state.isBankrupt = true;
+  }
+  private declareBankruptcyInternal() {
+    if (
+      this.game.state.playerTurnOrder.length === 0 &&
+      this.game.state.playerTurnOrder[0] === this.id
+    ) {
+      return;
+    }
+    const event: Omit<PlayerDeclareBankruptcyEvent, "turn" | "order"> = {
+      player: this.id,
+      type: EventType.PlayerDeclareBankruptcy,
+    };
+    this.game.processEvent(event);
   }
   private getRentAmount(property: Property | Railroad | Utility): number {
     const { propertyId, propertyType } = property;

@@ -4,8 +4,12 @@ import { PropertyLevel } from "common/property/types";
 import { CreditRating, PlayerId, PlayerState } from "common/state/types";
 
 export type RuntimeConfig = {
-  minTurnDuration: number;
-  turnLimit: number | null;
+  runtime: {
+    minTurnDuration: number;
+    turnLimit: number | null;
+    maxCreditChainDepth: number;
+    passGoAmount: number;
+  };
   players: {
     count: number;
     initialState: PlayerState;

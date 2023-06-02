@@ -7,7 +7,11 @@ import { PlayerId } from "common/state/types";
 export interface IDecisionMaker {
   decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>;
   decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean>;
-  getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null>;
+  getLoanQuoteForPlayer(
+    playerId: PlayerId,
+    amount: number,
+    depth: number
+  ): Promise<LoanQuote | null>;
   getPurchasePropertyQuoteForPlayer(
     playerId: PlayerId,
     propertyId: number

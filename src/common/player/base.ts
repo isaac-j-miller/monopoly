@@ -12,9 +12,14 @@ import {
   PayBankReason,
   PayBankEvent,
 } from "common/events/types";
-import { createLoanFromQuote } from "common/loan";
+import { createLoanStateFromQuote } from "common/loan";
 import { assertIsDefined, validateNumberIsNotNaN } from "common/util";
 import { PositionType } from "common/board/types";
+import {
+  calculateExpectedRentForProperty,
+  calculateExpectedReturnOnPropertyPerTurn,
+} from "common/events/util";
+import { calculateCreditRating } from "common/decision-maker/util";
 
 export class PlayerBase {
   protected game!: IGame;
@@ -23,7 +28,11 @@ export class PlayerBase {
     protected decisionMaker: IDecisionMaker,
     private _id: PlayerId,
     protected state: PlayerState
-  ) {}
+  ) {
+    this.state.creditLoans = new Set(Array.from(this.state.creditLoans));
+    this.state.debtLoans = new Set(Array.from(this.state.debtLoans));
+    this.state.properties = new Set(Array.from(this.state.properties));
+  }
   getState(): SerializablePlayerState {
     const { creditLoans, debtLoans, properties, ...rest } = this.state;
     return {
@@ -32,6 +41,12 @@ export class PlayerBase {
       debtLoans: Array.from(debtLoans),
       properties: Array.from(properties),
     };
+  }
+  protected get isRegistered() {
+    return !!this.game;
+  }
+  public get isBankrupt() {
+    return this.state.isBankrupt;
   }
   public get type() {
     return this.state.type;
@@ -102,6 +117,7 @@ export class PlayerBase {
       this.state.cashOnHand,
       `${this.id} cashOnHand is invalid; tried to add ${amount}`
     );
+    this.recalculateValues();
   }
   subtractCash(amount: number): void {
     this.state.cashOnHand -= amount;
@@ -109,24 +125,31 @@ export class PlayerBase {
       this.state.cashOnHand,
       `${this.id} cashOnHand is invalid; tried to subtract ${amount}`
     );
+    this.recalculateValues();
   }
   addCreditLoan(id: LoanId): void {
     this.state.creditLoans.add(id);
+    this.recalculateValues();
   }
   removeCreditLoan(id: LoanId): void {
     this.state.creditLoans.delete(id);
+    this.recalculateValues();
   }
   addDebtLoan(id: LoanId): void {
     this.state.debtLoans.add(id);
+    this.recalculateValues();
   }
   removeDebtLoan(id: LoanId): void {
     this.state.debtLoans.delete(id);
+    this.recalculateValues();
   }
   addProperty(id: number): void {
     this.state.properties.add(id);
+    this.recalculateValues();
   }
   removeProperty(id: number): void {
     this.state.properties.delete(id);
+    this.recalculateValues();
   }
   async handleFinanceOption(amount: number, reason: string): Promise<void> {
     const loanQuote = await this.decisionMaker.decideHowToFinancePayment(amount, reason);
@@ -171,7 +194,7 @@ export class PlayerBase {
     }
     const event: Omit<LoanCreationEvent, "turn" | "order"> = {
       type: EventType.LoanCreation,
-      loan: createLoanFromQuote(quote),
+      loan: createLoanStateFromQuote(quote),
     };
     this.game.processEvent(event);
   }
@@ -181,30 +204,97 @@ export class PlayerBase {
     }
     const event: Omit<LoanCreationEvent, "turn" | "order"> = {
       type: EventType.LoanCreation,
-      loan: createLoanFromQuote(quote),
+      loan: createLoanStateFromQuote(quote),
     };
     this.game.processEvent(event);
   }
   protected recalculateCreditRating() {
-    // TODO: implement
-    this.state.creditRating = CreditRating.A;
+    const totalDebt = this.getTotalLiabilityValue();
+    const loanExpensesPerTurn = this.getExpectedLoanExpensesPerTurn();
+    const nonLoanExpensesPerTurn = this.getExpectedNonLoanExpensesPerTurn();
+    const incomePerTurn = this.getExpectedIncomePerTurn();
+    const totalAssets = this.getTotalAssetValue();
+    return calculateCreditRating({
+      totalAssets,
+      totalDebt,
+      loanExpensesPerTurn,
+      nonLoanExpensesPerTurn,
+      incomePerTurn,
+    });
   }
-  protected recalculateCreditRatingLendingThreshold() {
-    // TODO: implement
-    this.state.creditRatingLendingThreshold = CreditRating.C;
+  protected recalculateCreditRatingLendingThreshold(): CreditRating {
+    // TODO: more sophisticated implementation
+    if (this.creditRating >= CreditRating.B) {
+      return this.creditRating - 4;
+    }
+    if (this.creditRating > CreditRating.CC) {
+      return this.creditRating - 2;
+    }
+    return CreditRating.D;
+  }
+  protected getExpectedNonLoanExpensesPerTurn() {
+    let expectedExpenses = 0;
+    let totalNonOwnedProperties = 0;
+    const potentialRents: number[] = [];
+    this.game.state.propertyStore.all().forEach(property => {
+      const owner = this.game.state.playerStore.get(property.owner);
+      if (this.properties.has(property.propertyId) || owner.isBank) {
+        return;
+      }
+      const expectedPropertyRent = calculateExpectedRentForProperty(
+        this.game.state,
+        property,
+        property.owner
+      );
+      totalNonOwnedProperties++;
+      potentialRents.push(expectedPropertyRent);
+    });
+    if (totalNonOwnedProperties > 0) {
+      let potential = 0;
+      potentialRents.forEach(rent => {
+        const likelyhoodOfLandingOnPropertyTimesRent =
+          rent / this.game.state.board.positions.length;
+        potential += likelyhoodOfLandingOnPropertyTimesRent;
+      });
+      expectedExpenses += potential / totalNonOwnedProperties;
+    }
+    return expectedExpenses;
+  }
+  protected getExpectedLoanExpensesPerTurn() {
+    let expectedExpenses = 0;
+    this.debtLoans.forEach(loanId => {
+      const payment = this.game.state.loanStore.get(loanId).getNominalPaymentAmount();
+      expectedExpenses += payment;
+    });
+    return expectedExpenses;
+  }
+  protected getExpectedIncomePerTurn() {
+    let expectedIncome = 0;
+    this.creditLoans.forEach(loanId => {
+      const payment = this.game.state.loanStore.get(loanId).getNominalPaymentAmount();
+      expectedIncome += payment;
+    });
+    this.properties.forEach(propertyId => {
+      const expectedRentPerTurn = calculateExpectedReturnOnPropertyPerTurn(
+        this.game.state,
+        propertyId,
+        this.id
+      );
+      expectedIncome += expectedRentPerTurn;
+    });
+    return expectedIncome;
   }
   public getNetWorth(): number {
     const totalAssetValue = this.getTotalAssetValue();
     const totalLiabilityValue = this.getTotalLiabilityValue();
     const netWorth = totalAssetValue - totalLiabilityValue;
-    this.state.netWorth = netWorth;
     return netWorth;
   }
   public recalculateValues(): void {
     console.log(`Recalculating values for ${this.id}...`);
-    this.recalculateCreditRating();
-    this.recalculateCreditRatingLendingThreshold();
-    this.getNetWorth();
+    this.state.creditRating = this.recalculateCreditRating();
+    this.state.creditRatingLendingThreshold = this.recalculateCreditRatingLendingThreshold();
+    this.state.netWorth = this.getNetWorth();
   }
   public getTotalAssetValue(): number {
     let value = this.state.cashOnHand;
@@ -228,13 +318,26 @@ export class PlayerBase {
     });
     return value;
   }
-  async getLoanQuotesFromOtherPlayers(amount: number): Promise<LoanQuote[]> {
-    const players = this.game.state.playerTurnOrder.map(playerId =>
-      this.game.state.playerStore.get(playerId)
-    );
+  async getLoanQuotesFromOtherPlayers(
+    amount: number,
+    depth: number,
+    exclude?: PlayerId[]
+  ): Promise<LoanQuote[]> {
+    if (depth > this.config.runtime.maxCreditChainDepth) {
+      return [];
+    }
+    const players = ["Bank_0" as PlayerId, ...this.game.state.playerTurnOrder].map(playerId => {
+      if (playerId !== this.id && !exclude?.includes(playerId)) {
+        return this.game.state.playerStore.get(playerId);
+      }
+      return null;
+    });
     const quotes: LoanQuote[] = [];
     for await (const player of players) {
-      const offer = await player.getLoanQuoteForPlayer(this.id, amount);
+      if (player === null) {
+        continue;
+      }
+      const offer = await player.getLoanQuoteForPlayer(this.id, amount, depth);
       if (offer) {
         console.log(`Got loan offer from ${player.id}`);
         quotes.push(offer);
@@ -248,12 +351,18 @@ export class PlayerBase {
     propertyId: number,
     price: number
   ): Promise<PropertyQuote[]> {
-    const players = this.game.state.playerTurnOrder.map(playerId =>
-      this.game.state.playerStore.get(playerId)
-    );
+    const players = ["Bank_0" as PlayerId, ...this.game.state.playerTurnOrder].map(playerId => {
+      if (playerId !== this.id) {
+        return this.game.state.playerStore.get(playerId);
+      }
+      return null;
+    });
     const property = this.game.state.propertyStore.get(propertyId);
     const quotes: PropertyQuote[] = [];
     for await (const player of players) {
+      if (!player) {
+        continue;
+      }
       const quote: PropertyQuote = {
         ...property,
         offer: price,
@@ -266,8 +375,12 @@ export class PlayerBase {
     }
     return quotes;
   }
-  async getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null> {
-    return this.decisionMaker.getLoanQuoteForPlayer(playerId, amount);
+  async getLoanQuoteForPlayer(
+    playerId: PlayerId,
+    amount: number,
+    depth: number
+  ): Promise<LoanQuote | null> {
+    return this.decisionMaker.getLoanQuoteForPlayer(playerId, amount, depth);
   }
   async getPurchasePropertyQuoteForPlayer(
     playerId: PlayerId,
