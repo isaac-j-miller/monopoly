@@ -19,6 +19,7 @@ export interface ILoanStore {
 }
 
 export interface IPlayerStore {
+  allNonBankPlayerIds(): PlayerId[];
   set(player: IPlayer): void;
   get(id: PlayerId): IPlayer;
   withPlayer<T>(id: PlayerId, fn: (player: IPlayer) => T): T;

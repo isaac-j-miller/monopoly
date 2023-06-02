@@ -42,7 +42,7 @@ export const calculateCreditRating = (params: CreditRatingParams): CreditRating 
   const expectedExpensesDividedByAssets = totalExpensesPerTurn / totalAssets;
   let score = 0.5;
   if (totalAssets > 0) {
-    score -= leverage / 20;
+    score -= leverage / 10;
     score += totalAssets / 5000;
     score += netIncomePerTurnDividedByAssets / 5;
     score -= expectedExpensesDividedByAssets / 100;

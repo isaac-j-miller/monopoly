@@ -28,6 +28,7 @@ export class SocketInterface {
   public humanInterface?: HumanRemoteInterface;
   private gameConfig!: GameConfig;
   private game!: IGame;
+  public readonly snapshots: SocketStateUpdate[];
   constructor(
     readonly socket: Socket,
     private key: SerializedGamePlayer,
@@ -37,6 +38,7 @@ export class SocketInterface {
     private readonly onSocketDisconnect: (reason: Socket.DisconnectReason) => void
   ) {
     this.config = getRuntimeConfig();
+    this.snapshots = [];
   }
   get state(): GameState {
     return this.bus.state;
@@ -52,9 +54,13 @@ export class SocketInterface {
     assertIsDefined(this._gamePlayer);
     return this._gamePlayer.playerId;
   }
-  processEvent = async (event: GameEvent) => {
+  processEvent = (event: GameEvent) => {
     this.bus.processEvent(event);
     this.incrementCounter();
+  };
+  processSnapshot = (snapshot: SocketStateUpdate) => {
+    const { turn } = snapshot;
+    this.snapshots[turn] = snapshot;
   };
   async getInitialState() {
     console.log("emitting REQUEST_STATE");

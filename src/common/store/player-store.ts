@@ -11,6 +11,9 @@ export class PlayerStore implements IPlayerStore {
       this.set(player);
     });
   }
+  allNonBankPlayerIds(): PlayerId[] {
+    return Object.keys(this.players).filter(p => !this.players[p as PlayerId].isBank) as PlayerId[];
+  }
   set(player: IPlayer): void {
     this.players[player.id] = player;
   }

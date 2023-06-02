@@ -17,6 +17,10 @@ export class SocketIOGameDisplay implements IDisplay {
   processEvent = (event: GameEvent) => {
     console.debug(`sending game event ${event.type}: ${EventType[event.type]}`);
     this.io.to(this.gameId).emit("GAME_EVENT", event);
+    if (event.type === EventType.CompleteTurn) {
+      const state = this.getState();
+      this.io.to(this.gameId).emit("SNAPSHOT", state);
+    }
   };
   getState = (): SocketStateUpdate => {
     return this.gameStore.withGame(this.gameId, game => {
