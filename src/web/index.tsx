@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { assertIsDefined } from "common/util";
 import { Home } from "./pages/home";
 import { Game } from "./pages/game";
+import { Lobby } from "./pages/lobby";
 
 const domNode = document.getElementById("root");
 assertIsDefined(domNode);
@@ -18,6 +19,7 @@ root.render(
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<Home />}></Route>
+      <Route path="/lobby/:id" element={<Lobby />}></Route>
       <Route path="/game/:id" element={<Game />}></Route>
     </Routes>
   </BrowserRouter>

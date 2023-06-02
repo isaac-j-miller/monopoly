@@ -1,7 +1,6 @@
 import React from "react";
-import { SocketProps } from "./socket-props";
 import { PlayerId } from "common/state/types";
-import styled from "@emotion/styled";
+import { SocketProps } from "./socket-props";
 import { Navbar, Tab, Tabs } from "@blueprintjs/core";
 import { PlayerTab } from "./tabs/player";
 import { EconomyTab } from "./tabs/economy";
@@ -9,7 +8,7 @@ import { PropertyTab } from "./tabs/property";
 import { LoansTab } from "./tabs/loans";
 
 export type PanelProps = SocketProps & {
-  playerId: PlayerId;
+  playerId: PlayerId | null;
   counter: number;
 };
 

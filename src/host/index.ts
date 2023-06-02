@@ -9,6 +9,7 @@ import { getCreateGameHandler } from "./handlers/create-game";
 import { parseKey } from "./handlers/parse-key";
 import { getWebAsset, getWebIndexHandler } from "./handlers/get-asset";
 import { handlerWrapper } from "./handlers/wrapper";
+import { getGetGameHandler } from "./handlers/get-game";
 
 const PORT = Number.parseInt(process.env.PORT ?? "6002");
 
@@ -23,13 +24,15 @@ const main = async () => {
   app.use(vite.middlewares);
   app.use(express.json());
   const getWebIndex = handlerWrapper(getWebIndexHandler(vite));
-  app.get(["/", "/game/:id"], getWebIndex);
+  app.get(["/", "/game/:id", "/lobby/:id"], getWebIndex);
   const getWebAssetHandler = handlerWrapper(getWebAsset(vite));
   app.get("/assets/:asset(*)", getWebAssetHandler);
   const io = new Server(server, {});
   const gameStore = new GameStore(config, io);
   const createGameHandler = getCreateGameHandler(gameStore);
+  const getGameHandler = getGetGameHandler(gameStore);
   app.post("/api/create-game", handlerWrapper(createGameHandler));
+  app.get("/api/game/:id", handlerWrapper(getGameHandler));
   app.get("/api/parse-key/:key", handlerWrapper(parseKey));
   io.on("connection", socket => handleGameSocketConnection(config, gameStore, socket));
   server.listen(PORT, () => {

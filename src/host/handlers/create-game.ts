@@ -12,6 +12,8 @@ export const getCreateGameHandler = (store: GameStore) => {
     const gameId = store.createGame(req.body);
     const data: CreateGameResponse = {
       keys: {},
+      gameId,
+      observer: serializeGamePlayer({ gameId, playerId: null }),
     };
     req.body.players.forEach(({ id, type }) => {
       if (type !== HumanOrComputerPlayerType.Human) {

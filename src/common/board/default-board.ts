@@ -13,6 +13,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Mediterranean Avenue",
     propertyId: 0,
     basePrice: 60,
+    baseRent: 2,
   },
   {
     position: 2,
@@ -26,6 +27,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Baltic Avenue",
     propertyId: 1,
     basePrice: 60,
+    baseRent: 4,
   },
   {
     position: 4,
@@ -48,6 +50,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Oriental Avenue",
     propertyId: 3,
     basePrice: 100,
+    baseRent: 6,
   },
   {
     position: 7,
@@ -61,6 +64,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Vermont Avenue",
     propertyId: 4,
     basePrice: 100,
+    baseRent: 6,
   },
   {
     position: 9,
@@ -69,6 +73,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Conneticut Avenue",
     propertyId: 5,
     basePrice: 120,
+    baseRent: 8,
   },
   {
     position: 10,
@@ -82,6 +87,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "St. Charles Place",
     propertyId: 6,
     basePrice: 140,
+    baseRent: 10,
   },
   {
     position: 12,
@@ -98,6 +104,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "States Avenue",
     propertyId: 8,
     basePrice: 140,
+    baseRent: 10,
   },
   {
     position: 14,
@@ -106,6 +113,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Virginia Avenue",
     propertyId: 9,
     basePrice: 160,
+    baseRent: 12,
   },
   {
     position: 15,
@@ -121,6 +129,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "St. James Place",
     propertyId: 11,
     basePrice: 180,
+    baseRent: 14,
   },
   {
     position: 17,
@@ -134,6 +143,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Tennessee Avenue",
     propertyId: 12,
     basePrice: 180,
+    baseRent: 14,
   },
   {
     position: 19,
@@ -142,6 +152,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "New York Avenue",
     propertyId: 13,
     basePrice: 200,
+    baseRent: 16,
   },
   {
     position: 20,
@@ -155,6 +166,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Kentucky Avenue",
     propertyId: 14,
     basePrice: 220,
+    baseRent: 18,
   },
   {
     position: 22,
@@ -168,6 +180,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Indiana Avenue",
     propertyId: 15,
     basePrice: 220,
+    baseRent: 18,
   },
   {
     position: 24,
@@ -176,6 +189,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Illinois Avenue",
     propertyId: 16,
     basePrice: 240,
+    baseRent: 20,
   },
   {
     position: 25,
@@ -191,6 +205,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Atlantic Avenue",
     propertyId: 18,
     basePrice: 260,
+    baseRent: 22,
   },
   {
     position: 27,
@@ -199,6 +214,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Ventnor Avenue",
     propertyId: 19,
     basePrice: 260,
+    baseRent: 22,
   },
   {
     position: 28,
@@ -215,6 +231,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Marvin Gardens",
     propertyId: 21,
     basePrice: 280,
+    baseRent: 24,
   },
   {
     position: 30,
@@ -229,6 +246,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Pacific Avenue",
     propertyId: 22,
     basePrice: 300,
+    baseRent: 26,
   },
   {
     position: 32,
@@ -237,6 +255,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "North Carolina Avenue",
     propertyId: 23,
     basePrice: 300,
+    baseRent: 26,
   },
   {
     position: 33,
@@ -250,6 +269,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Pennsylvania Avenue",
     propertyId: 24,
     basePrice: 320,
+    baseRent: 28,
   },
   {
     position: 35,
@@ -270,6 +290,7 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Park Place",
     propertyId: 26,
     basePrice: 350,
+    baseRent: 35,
   },
   {
     position: 38,
@@ -285,5 +306,6 @@ export const defaultBoard: BoardPosition<PositionType>[] = [
     name: "Boardwalk",
     propertyId: 27,
     basePrice: 400,
+    baseRent: 50,
   },
 ];

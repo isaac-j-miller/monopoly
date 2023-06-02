@@ -21,6 +21,7 @@ export class HumanRemoteInterface {
     private readonly socket: Socket,
     private readonly socketCounter: () => number,
     private readonly incrementCounter: () => void,
+    readonly startGame: () => void,
     readonly gameState: () => GameState,
     readonly playerId: PlayerId
   ) {
@@ -57,9 +58,6 @@ export class HumanRemoteInterface {
     const eventName = `CLOSE_DECISION_MAKER_TASK_${id}`;
     this.socket.emit(eventName, response);
     this.currentTask = defaultTask;
-  }
-  startGame() {
-    this.socket.emit("START_GAME");
   }
   isStarted() {
     return this.gameState().started;

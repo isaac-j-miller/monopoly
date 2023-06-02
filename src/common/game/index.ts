@@ -14,6 +14,7 @@ import {
 import { PlayerId } from "common/state/types";
 import { createLoanFromQuote } from "common/loan";
 import { LoanQuote } from "common/loan/types";
+import { sleep } from "common/util";
 import { EventHook, GameConfig, IGame } from "./types";
 
 export class Game implements IGame {
@@ -99,6 +100,7 @@ export class Game implements IGame {
       type: EventType.CompleteTurn,
     };
     this.processEventInternal(endTurnEvent);
+    await sleep(100);
   }
   async takePlayerTurn(player: IPlayer): Promise<void> {
     if (player.isBank) {
@@ -117,6 +119,7 @@ export class Game implements IGame {
       player: player.id,
     };
     this.processEvent(endPlayerTurnEvent);
+    await sleep(100);
   }
   private processEventInternal(event: GameEvent): void {
     this.bus.processEvent(event);

@@ -1,5 +1,6 @@
 import axios from "axios";
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "@emotion/styled";
 import { AnchorButton, Button, Card, FormGroup, NumericInput, Spinner } from "@blueprintjs/core";
 import {
@@ -73,6 +74,7 @@ const getNextPlayerId = (players: PlayerConfigParams[]): PlayerId => {
 };
 
 export const Home: React.FC = () => {
+  const navigate = useNavigate();
   const [gameConfigState, setGameConfigState] = React.useState<GameConfigParams>(defaultGameConfig);
   const [isLoading, setIsLoading] = React.useState(false);
   const [resp, setResp] = React.useState<CreateGameResponse>();
@@ -84,7 +86,8 @@ export const Home: React.FC = () => {
         throw err;
       })
       .then(({ data }) => {
-        setResp(data);
+        const { gameId } = data;
+        navigate(`/lobby/${gameId}`);
       })
       .finally(() => setIsLoading(false));
   };

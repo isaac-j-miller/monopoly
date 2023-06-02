@@ -2,8 +2,8 @@ import axios from "axios";
 import { Socket } from "socket.io-client";
 import { GameState, PlayerId } from "common/state/types";
 import { assertIsDefined } from "common/util";
-import { GamePlayer, SerializedGamePlayer } from "common/shared/types";
-import { EventType, GameEvent } from "common/events/types";
+import { OptionalGamePlayer, SerializedGamePlayer } from "common/shared/types";
+import { GameEvent } from "common/events/types";
 import { EventBus } from "common/events/bus";
 import { SocketStateUpdate } from "common/state/socket";
 import { Board } from "common/board/board";
@@ -15,17 +15,17 @@ import { Loan } from "common/loan";
 import { Player } from "common/player/player";
 import { PropertyStore } from "common/store/property-store";
 import { NoopDecisionMaker } from "common/decision-maker/noop";
-import { HumanRemoteInterface } from "./human-interface";
 import { Bank } from "common/player/bank";
-import { ReadOnlyGame } from "./read-only-game";
 import { GameConfig, IGame } from "common/game/types";
+import { HumanRemoteInterface } from "./human-interface";
+import { ReadOnlyGame } from "./read-only-game";
 
 export class SocketInterface {
   private _initialized = false;
-  private _gamePlayer?: GamePlayer;
+  private _gamePlayer?: OptionalGamePlayer;
   private bus!: EventBus;
   private config: RuntimeConfig;
-  public humanInterface!: HumanRemoteInterface;
+  public humanInterface?: HumanRemoteInterface;
   private gameConfig!: GameConfig;
   private game!: IGame;
   constructor(
@@ -48,7 +48,7 @@ export class SocketInterface {
     assertIsDefined(this._gamePlayer);
     return this._gamePlayer.gameId;
   }
-  get playerId(): PlayerId {
+  get playerId(): PlayerId | null {
     assertIsDefined(this._gamePlayer);
     return this._gamePlayer.playerId;
   }
@@ -101,6 +101,12 @@ export class SocketInterface {
     };
     this.gameConfig = gameConfig;
   }
+  startGame = () => {
+    this.socket.emit("START_GAME");
+  };
+  isStarted() {
+    return this.state.started;
+  }
   async setup() {
     if (this._initialized) {
       return;
@@ -110,7 +116,7 @@ export class SocketInterface {
       this.onSocketDisconnect();
     });
     console.log("attempting to parse key");
-    await axios.get<GamePlayer>(`/api/parse-key/${this.key}`).then(resp => {
+    await axios.get<OptionalGamePlayer>(`/api/parse-key/${this.key}`).then(resp => {
       this._gamePlayer = resp.data;
     });
     console.log("parsed key", this._gamePlayer);
@@ -118,16 +124,19 @@ export class SocketInterface {
     console.log("got initial state");
     this.socket.on("GAME_EVENT", this.processEvent);
     this.game = new ReadOnlyGame(this.gameConfig, () => this.state);
-    this.humanInterface = new HumanRemoteInterface(
-      this.config,
-      this.socket,
-      this.counter,
-      this.incrementCounter,
-      () => this.state,
-      this.playerId
-    );
-    this.state.playerStore.withPlayer(this.playerId, player => player.register(this.game));
-    this.humanInterface.setup();
+    if (this.playerId) {
+      this.humanInterface = new HumanRemoteInterface(
+        this.config,
+        this.socket,
+        this.counter,
+        this.incrementCounter,
+        this.startGame,
+        () => this.state,
+        this.playerId
+      );
+      this.state.playerStore.withPlayer(this.playerId, player => player.register(this.game));
+      this.humanInterface.setup();
+    }
     this._initialized = true;
     this.setReadyState(true);
     // for debugging state only

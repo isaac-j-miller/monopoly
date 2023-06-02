@@ -13,7 +13,8 @@ import {
   PayBankEvent,
 } from "common/events/types";
 import { createLoanFromQuote } from "common/loan";
-import { validateNumberIsNotNaN } from "common/util";
+import { assertIsDefined, validateNumberIsNotNaN } from "common/util";
+import { PositionType } from "common/board/types";
 
 export class PlayerBase {
   protected game!: IGame;
@@ -91,6 +92,9 @@ export class PlayerBase {
   goToJail(turn: number): void {
     this.state.inJail = true;
     this.state.inJailSince = turn;
+    const jailPosition = this.game.state.board.positions.find(p => p.type === PositionType.Jail);
+    assertIsDefined(jailPosition, "no jail position found");
+    this.state.position = jailPosition.position;
   }
   addCash(amount: number): void {
     this.state.cashOnHand += amount;

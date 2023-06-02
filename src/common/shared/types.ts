@@ -3,7 +3,14 @@ import { LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { PropertyQuote } from "common/property/types";
 
 export type CreateGameResponse = {
+  gameId: string;
+  observer: SerializedGamePlayer;
   keys: Record<PlayerId, SerializedGamePlayer>;
+};
+
+export type OptionalGamePlayer = {
+  gameId: string;
+  playerId: PlayerId | null;
 };
 
 export type GamePlayer = {
@@ -11,7 +18,7 @@ export type GamePlayer = {
   playerId: PlayerId;
 };
 
-export type SerializedGamePlayer = `${string}.${string}`;
+export type SerializedGamePlayer = `${string}.${string | ""}`;
 
 export enum DecisionMakerTask {
   None,

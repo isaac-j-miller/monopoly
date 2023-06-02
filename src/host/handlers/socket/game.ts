@@ -9,7 +9,7 @@ import { GameStore } from "./store";
 
 export class GameSocket {
   readonly gameId: string;
-  readonly playerId: PlayerId | undefined;
+  readonly playerId: PlayerId | null;
   private display!: SocketIOGameDisplay;
   constructor(
     private readonly config: RuntimeConfig,
