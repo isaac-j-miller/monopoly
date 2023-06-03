@@ -1,6 +1,14 @@
 import { GameState, PlayerId } from "common/state/types";
 import { assertNever } from "common/util";
-import { getPropertyRealValue, getPropertyRent, getUpgradeCost } from "common/property/upgrades";
+import {
+  getPropertyMarketValue,
+  getPropertyRealValue,
+  getPropertyRent,
+  getUpgradeCost,
+  updatePropertyValue,
+  updateRailroadValue,
+  updateUtilityValue,
+} from "common/property/upgrades";
 import { BoardPosition, PositionType } from "common/board/types";
 import { RuntimeConfig } from "common/config/types";
 import { Property } from "common/property/types";
@@ -197,7 +205,7 @@ export class EventBus {
   private processCompletePlayerTurn(event: CompletePlayerTurnEvent) {
     // console.log(`${event.player} completed turn ${event.turn}`);
   }
-  private processCompleteTurn(_event: CompleteTurnEvent) {
+  private processCompleteTurn(event: CompleteTurnEvent) {
     this.currentState.currentPlayerTurn = 0;
     this.currentState.turn++;
     this.state.loanStore.all().forEach(loan => {
@@ -211,6 +219,26 @@ export class EventBus {
         turn: this.currentState.turn,
       };
       this.processEvent(event);
+    });
+    this.state.propertyStore.all().forEach(({ propertyId }) => {
+      this.state.propertyStore.withProperty(propertyId, property => {
+        switch (property.propertyType) {
+          case PositionType.Property:
+            updatePropertyValue(property, this.state, this.config);
+            break;
+          case PositionType.Utility:
+            updateUtilityValue(property, this.state, this.config);
+            break;
+          case PositionType.Railroad:
+            updateRailroadValue(property, this.state, this.config);
+            break;
+          default:
+            assertNever(property);
+        }
+        if (property.mostRecentSale?.turn === event.turn) {
+          property.marketValue = property.mostRecentSale.amount;
+        }
+      });
     });
   }
   private processGoToJail(event: GoToJailEvent) {
@@ -234,7 +262,7 @@ export class EventBus {
       debtor.addDebtLoan(id);
       debtor.addCash(loan.initialPrincipal);
     });
-    console.log(`Created loan with ID ${id}. creditor: ${loan.creditor}, debtor: ${loan.debtor}`);
+    // console.log(`Created loan with ID ${id}. creditor: ${loan.creditor}, debtor: ${loan.debtor}`);
   }
   private processLoanPayment(event: LoanPaymentEvent) {
     const { loanId, amount } = event;
@@ -396,18 +424,27 @@ export class EventBus {
         previousOwner.addCash(amount);
         newOwner.subtractCash(amount);
         switch (propertyType) {
-          case PositionType.Railroad:
+          case PositionType.Railroad: {
             this.currentState.propertyStore.updateRailroad(propertyId, { owner: to });
             break;
-          case PositionType.Utility:
+          }
+          case PositionType.Utility: {
             this.currentState.propertyStore.updateUtility(propertyId, { owner: to });
             break;
-          case PositionType.Property:
+          }
+          case PositionType.Property: {
             this.currentState.propertyStore.updateProperty(propertyId, { owner: to });
             break;
+          }
           default:
             assertNever(propertyType);
         }
+        this.currentState.propertyStore.withProperty(propertyId, property => {
+          property.mostRecentSale = {
+            turn: event.turn,
+            amount,
+          };
+        });
       });
     });
   }
@@ -427,7 +464,12 @@ export class EventBus {
       };
       this.processEvent(payBankEvent);
       property.level = newLevel;
-      property.realValue = getPropertyRealValue(property.basePrice, property.level);
+      property.realValue = getPropertyRealValue(property);
+      property.marketValue = getPropertyMarketValue(
+        property,
+        this.state,
+        this.config.runtime.turnsToCountForNPV
+      );
       property.currentRent = getPropertyRent(property.baseRent, property.level, property.color);
     });
   }
@@ -446,7 +488,12 @@ export class EventBus {
       };
       this.processEvent(bankPayPlayerEvent);
       property.level = newLevel;
-      property.realValue = getPropertyRealValue(property.basePrice, property.level);
+      property.realValue = getPropertyRealValue(property);
+      property.marketValue = getPropertyMarketValue(
+        property,
+        this.state,
+        this.config.runtime.turnsToCountForNPV
+      );
       property.currentRent = getPropertyRent(property.baseRent, property.level, property.color);
     });
   }

@@ -1,13 +1,14 @@
 import React from "react";
 import styled from "@emotion/styled";
 import { Tooltip2 } from "@blueprintjs/popover2";
+import { Card } from "@blueprintjs/core";
 import { BoardPosition, PositionType, PropertyColor } from "common/board/types";
 import { Property, PropertyLevel } from "common/property/types";
 import { getRuntimeConfig } from "common/config";
 import { PositionInnerProps } from "./generic";
 import { PositionBaseDiv } from "./common";
 
-const colorMap: Record<PropertyColor, string> = {
+export const colorMap: Record<PropertyColor, string> = {
   [PropertyColor.Blue]: "blue",
   [PropertyColor.Brown]: "brown",
   [PropertyColor.Fuschia]: "fuchsia",
@@ -18,8 +19,11 @@ const colorMap: Record<PropertyColor, string> = {
   [PropertyColor.Yellow]: "goldenrod",
 };
 
-const ColorBar = styled.div`
-  display: block;
+export const ColorBar = styled.div`
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  vertical-align: middle;
   width: 100%;
   height: 20%;
 `;
@@ -39,21 +43,46 @@ const RestOfPosition = styled.div`
   }
 `;
 
+const ImprovementEmojiTooltipCard = styled(Card)`
+  background: white;
+`;
+
+const ImprovementBox = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  vertical-align: middle;
+  height: 100%;
+  &:hover {
+    cursor: pointer;
+  }
+`;
+export const ImprovementEmojiTooltip: React.FC<{ level: PropertyLevel }> = ({ level }) => {
+  const config = React.useMemo(() => getRuntimeConfig(), []);
+  const improvementEmojis = config.cli.levels[level];
+  return (
+    <Tooltip2
+      content={<ImprovementEmojiTooltipCard>{PropertyLevel[level]}</ImprovementEmojiTooltipCard>}
+      placement="bottom"
+      fill={true}
+    >
+      <ImprovementBox>{improvementEmojis}</ImprovementBox>
+    </Tooltip2>
+  );
+};
+
 export const PropertyPosition: React.FC<PositionInnerProps> = ({ emojiBox, position, state }) => {
   const boardPosition = React.useMemo(
     () => state.board.positions[position] as BoardPosition<PositionType.Property>,
     []
   );
-  const config = React.useMemo(() => getRuntimeConfig(), []);
   const property = state.propertyStore.get(boardPosition.propertyId) as Property;
   const color = colorMap[property.color];
-  const improvementEmojis = config.cli.levels[property.level];
   return (
     <PositionBaseDiv>
       <ColorBar style={{ backgroundColor: color }}>
-        <Tooltip2 content={PropertyLevel[property.level]} placement="bottom" fill={true}>
-          {improvementEmojis}
-        </Tooltip2>
+        <ImprovementEmojiTooltip level={property.level} />
       </ColorBar>
       <RestOfPosition>
         <div>{property.name}</div>

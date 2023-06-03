@@ -18,6 +18,10 @@ interface PropertyBase {
   marketValue: number;
   realValue: number;
   name: string;
+  mostRecentSale?: {
+    turn: number;
+    amount: number;
+  };
   propertyType: PositionType.Property | PositionType.Railroad | PositionType.Utility;
 }
 

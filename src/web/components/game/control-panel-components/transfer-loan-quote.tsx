@@ -2,6 +2,7 @@ import React from "react";
 import { CreditRating, GameState, InterestRateType } from "common/state/types";
 import { TransferLoanQuote } from "common/loan/types";
 import { getNominalPaymentAmount } from "common/loan";
+import { currencyFormatter } from "common/formatters/number";
 import { VerticalDiv } from "../../common/flex";
 
 type QuoteProps = {
@@ -19,14 +20,12 @@ export const TransferLoanQuoteDisplay: React.FC<QuoteProps> = ({ state, quote })
         Debtor: {quote.debtor} &lpar;Credit Rating: {CreditRating[creditRating]}&rpar;
       </p>
       <p>
-        Remaining Amount: {quote.amount.toLocaleString("en-US", { currency: "usd" })} at{" "}
-        {(quote.rate * 100).toPrecision(2)}%/turn for {quote.term} turns
+        Remaining Amount: {currencyFormatter(quote.amount)} at {(quote.rate * 100).toPrecision(2)}
+        %/turn for {quote.term} turns
       </p>
       <p>
         Expected payment per turn:{" "}
-        {getNominalPaymentAmount(quote.amount, quote.term, quote.rate).toLocaleString("en-US", {
-          currency: "usd",
-        })}
+        {currencyFormatter(getNominalPaymentAmount(quote.amount, quote.term, quote.rate))}
       </p>
       <p>Remaining turns: {}</p>
       <p>Rate Type: {InterestRateType[quote.rateType]}</p>

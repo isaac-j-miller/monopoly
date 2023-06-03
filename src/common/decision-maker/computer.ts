@@ -3,10 +3,15 @@ import { CreditRating, InterestRateType, PlayerId } from "common/state/types";
 import { LoanId, LoanQuote, TransferLoanQuote } from "common/loan/types";
 import { BoardPosition, PositionType, PropertyColor } from "common/board/types";
 import { getInterestRateForLoanQuote, getLoanQuoteFaceValue } from "common/loan";
-import { getUpgradeCost } from "common/property/upgrades";
+import { getPropertyMarketValue, getUpgradeCost } from "common/property/upgrades";
 import { IDecisionMaker } from "./types";
 import { DecisionMakerBase } from "./base";
-import { getCreditRatingBuySellPriceMultiplier } from "./util";
+import {
+  calculateLoanTermFromAmountPaymentAndRate,
+  getCreditRatingBuySellPriceMultiplier,
+} from "./util";
+import { calculateExpectedReturnOnPropertyPerTurn } from "common/events/util";
+import { currencyFormatter } from "common/formatters/number";
 
 export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisionMaker {
   async doOptionalActions(): Promise<void> {
@@ -53,7 +58,7 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
                 }
                 // TODO: do some more sophisticated calculations
                 const shouldAccept = await this.decideToAcceptPropertyQuote(quote);
-                if (shouldAccept) {
+                if (typeof shouldAccept === "boolean" && shouldAccept) {
                   this.player.purchaseProperty(quote);
                   const loanQuote = await this.decideHowToFinancePayment(quote.offer);
                   if (loanQuote) {
@@ -77,13 +82,24 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
         quote.loanId,
         coverShortfallRound
       );
-      return quote.offer > faceValue;
+      if (coverShortfallRound === this.config.runtime.maxRoundsForCashShortfall) {
+        // forced to sell
+        return true;
+      }
+      return Math.round(quote.offer) >= Math.round(faceValue);
     }
     // we are buying someone else's loan
     const [ratingAdjustedValue] = this.getValueOfLoanToPlayer(quote.loanId);
-    return quote.offer <= ratingAdjustedValue;
+    return Math.round(quote.offer) <= Math.round(ratingAdjustedValue);
   }
   private async coverCashOnHandShortfallInternal(round: number) {
+    const amountToCover = Math.round(this.player.cashOnHand * -1) + 1;
+    const loanQuotes = await this.player.getLoanQuotesFromOtherPlayers(amountToCover, 0, 0);
+    if (loanQuotes.length > 0) {
+      const best = loanQuotes.sort((a, b) => a.rate - b.rate)[0];
+      this.player.takeOutLoan(best);
+      return;
+    }
     // if we couldn't take out any loans to cover our cash shortfall, try selling some loans
     const loanValues = Array.from(this.player.creditLoans).map(loanId => {
       const [sortValue, faceValue] = this.getValueOfLoanToPlayer(loanId, round);
@@ -94,7 +110,14 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       const quotes = await this.player.getTransferLoanOffersFromOtherPlayers(loanId, faceValue);
       if (quotes.length > 0) {
         const bestQuote = quotes.sort((a, b) => b.offer - a.offer)[0];
-        if (await this.decideToAcceptTransferLoanQuote(bestQuote)) {
+        console.log(
+          `${this.player.id} got ${
+            quotes.length
+          } offers to sell loan ${loanId} (${currencyFormatter(
+            faceValue
+          )}), best one was ${currencyFormatter(bestQuote.offer)}`
+        );
+        if (await this.decideToAcceptTransferLoanQuote(bestQuote, round)) {
           this.player.sellLoan(bestQuote);
           if (this.player.cashOnHand >= 0) {
             break;
@@ -117,28 +140,61 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       const quotes = await this.player.getSellPropertyQuotesFromOtherPlayers(propertyId, value);
       if (quotes.length > 0) {
         const bestQuote = quotes.sort((a, b) => b.offer - a.offer)[0];
-        if (await this.decideToAcceptPropertyQuote(bestQuote)) {
-          this.player.sellProperty(bestQuote);
-          if (this.player.cashOnHand >= 0) {
-            break;
-          }
+        console.log(
+          `${this.player.id} got ${
+            quotes.length
+          } offers to sell ${propertyId} (asked for ${currencyFormatter(
+            value
+          )}), best one was ${currencyFormatter(bestQuote.offer)}`
+        );
+        const shouldAccept = await this.decideToAcceptPropertyQuote(bestQuote, round);
+        if (!shouldAccept || typeof shouldAccept !== "boolean") {
+          console.log(
+            `${this.player.id} declining offer to sell ${propertyId} for ${currencyFormatter(
+              bestQuote.offer
+            )} (asked for ${currencyFormatter(value)})`
+          );
+          continue;
+        }
+        console.log(
+          `${this.player.id} accepted offer to sell ${propertyId} for ${currencyFormatter(
+            bestQuote.offer
+          )}`
+        );
+        this.player.sellProperty(bestQuote);
+        if (this.player.cashOnHand >= 0) {
+          break;
         }
       }
     }
+    // if(this.player.cashOnHand <= 0) {
+    //   console.log("unable to raise money")
+    // }
     // TODO: try downgrading properties
   }
+  private getMaxPrefereableLoanPaymentAmount(): number {
+    const income = this.player.getExpectedIncomePerTurn();
+    const expenses = this.player.getExpectedExpensesPerTurn();
+    const netIncome = income - expenses;
+    if (netIncome <= 0) {
+      return 0;
+    }
+    return netIncome / 3;
+  }
   async coverCashOnHandShortfall(): Promise<void> {
-    if (this.player.cashOnHand < 0) {
+    if (this.player.cashOnHand >= 0) {
       return;
     }
     // need to get a loan or sell a property
-    await this.player.handleFinanceOption(
-      this.player.cashOnHand * -1 + 1,
-      "negative cash on hand balance"
+    const loanQuote = await this.decideHowToFinancePayment(
+      Math.ceil(this.player.cashOnHand * -1) + 1
     );
+    if (loanQuote) {
+      this.player.takeOutLoan(loanQuote);
+    }
     let round = 0;
     while (this.player.cashOnHand < 0) {
-      if (round > 20) {
+      if (round > this.config.runtime.maxRoundsForCashShortfall) {
         break;
       }
       await this.coverCashOnHandShortfallInternal(round);
@@ -150,7 +206,8 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       this.player.cashOnHand < amount ||
       (this.player.creditRating >= CreditRating.AA && amount > this.player.cashOnHand * 0.5)
     ) {
-      const loanQuotes = await this.player.getLoanQuotesFromOtherPlayers(amount, 1);
+      const budget = this.getMaxPrefereableLoanPaymentAmount();
+      const loanQuotes = await this.player.getLoanQuotesFromOtherPlayers(amount, 1, budget);
       const bestLoanQuote = loanQuotes.sort((a, b) => {
         // TODO: determine a more situationally-aware method of determining the "best" loan
         return a.rate - b.rate;
@@ -183,7 +240,7 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     // TODO: add riskiness into calculation
     const ratingAdjustedValue =
       faceValue * this.config.credit.ratingMultiplierOnDebtAssetValue[debtorCreditRating];
-    const shortfallMultiplier = 1 - 0.04 * coverShortfallRound;
+    const shortfallMultiplier = 1 - this.config.runtime.depreciationPerRound * coverShortfallRound;
     return [ratingAdjustedValue, faceValue * shortfallMultiplier];
   }
   private getValueOfPropertyToPlayer(propertyId: number, coverShortfallRound: number = 0): number {
@@ -213,27 +270,56 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       });
     }
     const creditRating = this.player.creditRating;
-    const monopolyMultiplier = 4 * (totalOwnedOfType / totalOfType);
-    const { realValue } = property;
+    const monopolyMultiplier = totalOwnedOfType / totalOfType + 1;
+    const { marketValue } = property;
     const creditRatingMultiplier = getCreditRatingBuySellPriceMultiplier(creditRating);
-    const shortfallMultiplier = 1 - 0.04 * coverShortfallRound;
-    return realValue * monopolyMultiplier * creditRatingMultiplier * shortfallMultiplier;
+    const shortfallMultiplier = 1 - this.config.runtime.depreciationPerRound * coverShortfallRound;
+    const numberOfPlayersStillInGame = this.game.state.playerTurnOrder.length;
+    const originalNumberOfPlayers = this.game.state.playerStore.allNonBankPlayerIds().length;
+    const fractionRemaining = numberOfPlayersStillInGame / originalNumberOfPlayers;
+    // value properties more highly when there are fewer players left
+    const numberOfPlayersLeftMultiplier = 1 + 0.4 / fractionRemaining;
+    const v =
+      marketValue *
+      monopolyMultiplier *
+      creditRatingMultiplier *
+      shortfallMultiplier *
+      numberOfPlayersLeftMultiplier;
+    if (v === 0) {
+      console.log("for some reason, property is worthless");
+    }
+    return v;
   }
-  async decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean> {
+  async decideToAcceptPropertyQuote(
+    quote: PropertyQuote,
+    shortfallRound?: number
+  ): Promise<boolean | PropertyQuote> {
     const { propertyId, offer } = quote;
-    const valueToAccept = this.getValueOfPropertyToPlayer(propertyId);
+    const valueToAccept = this.getValueOfPropertyToPlayer(propertyId, shortfallRound);
+    let isOk = false;
     if (quote.owner === this.player.id) {
       // this is a sell quote
-      return offer >= valueToAccept;
+      isOk = Math.round(offer) >= Math.round(valueToAccept);
+      if (shortfallRound === this.config.runtime.maxRoundsForCashShortfall) {
+        return true;
+      }
     } else {
       // this is a buy quote
-      return offer <= valueToAccept;
+      isOk = Math.round(offer) <= Math.round(valueToAccept);
     }
+    if (isOk) {
+      return true;
+    }
+    return {
+      ...quote,
+      offer: valueToAccept,
+    };
   }
   async getLoanQuoteForPlayer(
     playerId: PlayerId,
-    amount: number,
-    depth: number
+    requestedAmount: number,
+    depth: number,
+    preferredPaymentPerTurn: number
   ): Promise<LoanQuote | null> {
     const player = this.game.state.playerStore.get(playerId);
     const { creditRating } = player;
@@ -247,6 +333,7 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       throw new Error(`no multiplier for rating ${CreditRating[creditRating]} (${creditRating})`);
     }
     const rate = interestRate * multiplier;
+    const amount = requestedAmount < 10 ? 10 : Math.ceil(requestedAmount);
     const quote: LoanQuote = {
       // TODO: figure out variable rate loans
       rateType: InterestRateType.Fixed,
@@ -254,14 +341,17 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       creditor: this.player.id,
       debtor: playerId,
       rate,
-      // TODO: figure out how to determine an acceptable term
-      term: 20,
+      term: calculateLoanTermFromAmountPaymentAndRate(amount, rate, preferredPaymentPerTurn),
     };
     // TODO: add riskiness into calculation
     if (this.player.cashOnHand < amount * 2) {
-      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(amount, depth + 1, [
-        playerId,
-      ]);
+      // take out a shorter term loan to minimize interest payments
+      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(
+        amount,
+        depth + 1,
+        preferredPaymentPerTurn * 3,
+        [playerId]
+      );
       const bestLoanOffer = loanOffers.sort(
         (a, b) => getLoanQuoteFaceValue(a) - getLoanQuoteFaceValue(b)
       )[0];
@@ -272,6 +362,11 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       // TODO: add riskiness into calculation
       const quoteInterestRate = getInterestRateForLoanQuote(amount, bestLoanOfferValue * 1.2);
       quote.rate = quoteInterestRate;
+      quote.term = calculateLoanTermFromAmountPaymentAndRate(
+        amount,
+        quoteInterestRate,
+        preferredPaymentPerTurn
+      );
     }
     return quote;
   }
@@ -285,7 +380,7 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     }
     const quote: PropertyQuote = {
       ...property,
-      offer: property.realValue,
+      offer: this.getValueOfPropertyToPlayer(propertyId),
       for: playerId,
     };
     return quote;
@@ -316,7 +411,16 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
       if (quote.offer < this.player.cashOnHand) {
         return true;
       }
-      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(quote.offer, 0);
+      const expectedRevenueFromProperty = calculateExpectedReturnOnPropertyPerTurn(
+        this.game.state,
+        property.propertyId,
+        this.player.id
+      );
+      const loanOffers = await this.player.getLoanQuotesFromOtherPlayers(
+        quote.offer,
+        0,
+        expectedRevenueFromProperty
+      );
       if (loanOffers.length > 0) {
         return true;
       }

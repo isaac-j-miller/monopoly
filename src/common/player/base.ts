@@ -100,7 +100,6 @@ export class PlayerBase {
     this.state.mostRecentRoll = roll;
   }
   setPosition(position: number): void {
-    console.log(`setting position of ${this.id} to ${position}`);
     this.state.position = position;
   }
   getOutOfJail(): void {
@@ -154,7 +153,7 @@ export class PlayerBase {
     this.state.properties.delete(id);
     this.recalculateValues();
   }
-  async handleFinanceOption(amount: number, reason: string): Promise<void> {
+  protected async handleFinanceOption(amount: number, reason?: string): Promise<void> {
     const loanQuote = await this.decisionMaker.decideHowToFinancePayment(amount, reason);
     if (!loanQuote) {
       return;
@@ -180,7 +179,6 @@ export class PlayerBase {
       throw new Error(`Cannot sell ${quote.propertyId} when you don't own it`);
     }
     // TODO: sell improvements to property and other properties of the same color to the bank if necessary
-
     const event: Omit<PropertyTransferEvent, "turn" | "order"> = {
       type: EventType.PropertyTransfer,
       amount: quote.offer,
@@ -240,6 +238,9 @@ export class PlayerBase {
     }
     return CreditRating.D;
   }
+  getExpectedExpensesPerTurn() {
+    return this.getExpectedLoanExpensesPerTurn() + this.getExpectedNonLoanExpensesPerTurn();
+  }
   protected getExpectedNonLoanExpensesPerTurn() {
     let expectedExpenses = 0;
     let totalNonOwnedProperties = 0;
@@ -276,13 +277,15 @@ export class PlayerBase {
     });
     return expectedExpenses;
   }
-  protected getExpectedIncomePerTurn() {
+  getExpectedIncomePerTurn() {
     let expectedIncome = 0;
     this.creditLoans.forEach(loanId => {
-      const payment = this.game.state.loanStore.get(loanId).getNominalPaymentAmount();
-      if (Number.isNaN(payment)) {
-        throw new Error();
+      const loan = this.game.state.loanStore.get(loanId);
+      if (!loan) {
+        console.log(`cannot find loan ${loanId}`);
+        return;
       }
+      const payment = loan.getNominalPaymentAmount();
       expectedIncome += payment;
     });
     this.properties.forEach(propertyId => {
@@ -291,14 +294,8 @@ export class PlayerBase {
         propertyId,
         this.id
       );
-      if (Number.isNaN(expectedRentPerTurn)) {
-        throw new Error();
-      }
       expectedIncome += expectedRentPerTurn;
     });
-    if (Number.isNaN(expectedIncome)) {
-      throw new Error();
-    }
     return expectedIncome;
   }
   public getNetWorth(): number {
@@ -317,7 +314,7 @@ export class PlayerBase {
     let value = 0;
     this.state.properties.forEach(id => {
       const property = this.game.state.propertyStore.get(id);
-      value += property.realValue;
+      value += property.marketValue;
     });
     this.state.creditLoans.forEach(id => {
       const loan = this.game.state.loanStore.get(id);
@@ -343,6 +340,7 @@ export class PlayerBase {
   async getLoanQuotesFromOtherPlayers(
     amount: number,
     depth: number,
+    preferredPaymentPerTurn: number,
     exclude?: PlayerId[]
   ): Promise<LoanQuote[]> {
     if (depth > this.config.runtime.maxCreditChainDepth) {
@@ -359,7 +357,12 @@ export class PlayerBase {
       if (player === null) {
         continue;
       }
-      const offer = await player.getLoanQuoteForPlayer(this.id, amount, depth);
+      const offer = await player.getLoanQuoteForPlayer(
+        this.id,
+        amount,
+        depth,
+        preferredPaymentPerTurn
+      );
       if (offer) {
         // console.log(`Got loan offer from ${player.id}`);
         quotes.push(offer);
@@ -391,8 +394,10 @@ export class PlayerBase {
         for: player.id,
       };
       const wouldAccept = await player.decideToAcceptPropertyQuote(quote);
-      if (wouldAccept) {
+      if (typeof wouldAccept === "boolean" && wouldAccept) {
         quotes.push(quote);
+      } else if (typeof wouldAccept !== "boolean") {
+        quotes.push(wouldAccept);
       }
     }
     return quotes;
@@ -400,9 +405,15 @@ export class PlayerBase {
   async getLoanQuoteForPlayer(
     playerId: PlayerId,
     amount: number,
-    depth: number
+    depth: number,
+    preferredPaymentPerTurn: number
   ): Promise<LoanQuote | null> {
-    return this.decisionMaker.getLoanQuoteForPlayer(playerId, amount, depth);
+    return this.decisionMaker.getLoanQuoteForPlayer(
+      playerId,
+      amount,
+      depth,
+      preferredPaymentPerTurn
+    );
   }
   async getPurchasePropertyQuoteForPlayer(
     playerId: PlayerId,
@@ -410,7 +421,7 @@ export class PlayerBase {
   ): Promise<PropertyQuote | null> {
     return this.decisionMaker.getPurchasePropertyQuoteForPlayer(playerId, propertyId);
   }
-  async decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean> {
+  async decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean | PropertyQuote> {
     return this.decisionMaker.decideToAcceptPropertyQuote(quote);
   }
   payCashToBank(amount: number, reason: PayBankReason) {
@@ -435,12 +446,18 @@ export class PlayerBase {
     loanId: LoanId,
     price: number
   ): Promise<TransferLoanQuote[]> {
-    const players = this.game.state.playerTurnOrder.map(playerId =>
-      this.game.state.playerStore.get(playerId)
-    );
+    const players = this.game.state.playerTurnOrder.map(playerId => {
+      if (playerId === this.id) {
+        return null;
+      }
+      return this.game.state.playerStore.get(playerId);
+    });
     const loan = this.game.state.loanStore.get(loanId);
     const quotes: TransferLoanQuote[] = [];
     for await (const player of players) {
+      if (!player) {
+        continue;
+      }
       const quote: TransferLoanQuote = {
         amount: loan.getCurrentBalance(),
         creditor: loan.creditor,

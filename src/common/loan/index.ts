@@ -78,17 +78,14 @@ export class Loan implements ILoan {
     return this.getCurrentBalance();
   }
   getNominalPaymentAmount(): number {
-    return getNominalPaymentAmount(this.state.initialPrincipal, this.state.term, this.state.rate);
+    return getNominalPaymentAmount(this.getCurrentBalance(), this.state.term, this.state.rate);
   }
 }
 
-export function getNominalPaymentAmount(
-  initialPrincipal: number,
-  term: number,
-  rate: number
-): number {
-  const totalAmountDue = initialPrincipal + term * initialPrincipal * rate;
-  return totalAmountDue / term;
+export function getNominalPaymentAmount(amount: number, term: number, rate: number): number {
+  const numerator = rate * amount;
+  const denominator = 1 - (1 + rate) ** (-1 * term);
+  return numerator / denominator;
 }
 
 export function createLoanStateFromQuote(quote: LoanQuote): LoanState {

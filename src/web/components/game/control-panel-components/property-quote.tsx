@@ -1,8 +1,9 @@
 import React from "react";
 import { PropertyQuote } from "common/property/types";
 import { GameState } from "common/state/types";
-import { VerticalDiv } from "../../common/flex";
 import { PositionType } from "common/board/types";
+import { currencyFormatter } from "common/formatters/number";
+import { VerticalDiv } from "../../common/flex";
 
 type QuoteProps = {
   state: GameState;
@@ -17,8 +18,8 @@ export const PropertyQuoteDisplay: React.FC<QuoteProps> = ({ state, quote }) => 
         Property: {quote.name} &lpar;{PositionType[quote.propertyType]}&rpar;
       </p>
       <p>
-        Offer Price: {quote.offer.toLocaleString("en-US", { currency: "usd" })} &lpar;Base Price:{" "}
-        {quote.basePrice.toLocaleString("en-US", { currency: "usd" })}&rpar;
+        Offer Price: {currencyFormatter(quote.offer)} &lpar;Base Price:{" "}
+        {currencyFormatter(quote.basePrice)}&rpar;
       </p>
       <p>Current Owner: {quote.owner}</p>
     </VerticalDiv>

@@ -1,3 +1,4 @@
+import { getRuntimeConfig } from "common/config";
 import { CreditRating } from "common/state/types";
 
 const normalizeCreditRating = (rating: CreditRating): number => {
@@ -20,7 +21,7 @@ const deNormalizeCreditRating = (normalizedRating: number): CreditRating => {
 
 export const getCreditRatingBuySellPriceMultiplier = (rating: CreditRating): number => {
   const normal = normalizeCreditRating(rating);
-  return normal * 1.5;
+  return (normal + 1) * 0.75;
 };
 
 export type CreditRatingParams = {
@@ -61,4 +62,36 @@ export const calculateCreditRating = (params: CreditRatingParams): CreditRating 
   }
   const asRating = deNormalizeCreditRating(score);
   return asRating;
+};
+
+const config = getRuntimeConfig();
+
+export const calculateLoanTermFromAmountPaymentAndRate = (
+  amount: number,
+  rate: number,
+  preferredPaymentPerTurn: number
+): number => {
+  if (preferredPaymentPerTurn <= 0) {
+    return config.runtime.maxLoanTerm;
+  }
+  if (preferredPaymentPerTurn >= amount) {
+    return config.runtime.minLoanTerm;
+  }
+  const insideLog = preferredPaymentPerTurn / rate / (preferredPaymentPerTurn / rate - amount);
+  if (insideLog < 0) {
+    // this means the loan will never be paid off
+    return config.runtime.maxLoanTerm;
+  }
+  const numerator = Math.log(insideLog);
+
+  const denominator = Math.log(1 + rate);
+  const floatResult = numerator / denominator;
+  const rounded = Math.ceil(floatResult);
+  if (rounded > config.runtime.maxLoanTerm) {
+    return config.runtime.maxLoanTerm;
+  }
+  if (rounded < config.runtime.minLoanTerm) {
+    return config.runtime.minLoanTerm;
+  }
+  return rounded;
 };

@@ -23,6 +23,8 @@ export interface IPlayer {
   readonly getOutOfJailFreeCards: number;
   readonly isBankrupt: boolean;
   readonly creditLimit: number;
+  getExpectedIncomePerTurn(): number;
+  getExpectedExpensesPerTurn(): number;
   getState(): SerializablePlayerState;
   setMostRecentRoll(roll: [number, number]): void;
   setPosition(position: number): void;
@@ -50,21 +52,27 @@ export interface IPlayer {
     player: PlayerId,
     propertyId: number
   ): Promise<PropertyQuote | null>;
-  getLoanQuoteForPlayer(player: PlayerId, amount: number, depth: number): Promise<LoanQuote | null>;
+  getLoanQuoteForPlayer(
+    player: PlayerId,
+    amount: number,
+    depth: number,
+    preferredPaymentPerTurn: number
+  ): Promise<LoanQuote | null>;
   getLoanQuotesFromOtherPlayers(
     amount: number,
     depth: number,
+    preferredPaymentPerTurn: number,
     excludePlayers?: PlayerId[]
   ): Promise<LoanQuote[]>;
   getSellPropertyQuotesFromOtherPlayers(
     propertyId: number,
     price: number
   ): Promise<PropertyQuote[]>;
-  decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean>;
+  decideToAcceptPropertyQuote(quote: PropertyQuote): Promise<boolean | PropertyQuote>;
   decideToPayToGetOutOfJail(): Promise<boolean>;
   decideToUseGetOutOfJailFreeCard(): Promise<boolean>;
   payCashToBank(amount: number, reason: PayBankReason): void;
-  handleFinanceOption(amount: number, reason: string): Promise<void>;
+  // handleFinanceOption(amount: number, reason?: string): Promise<void>;
   decideToAcceptTransferLoanQuote(quote: TransferLoanQuote): Promise<boolean>;
   getTransferLoanOffersFromOtherPlayers(
     loanId: LoanId,

@@ -10,6 +10,7 @@ import { SimpleYesNo } from "./simple-yes-no";
 import { TransferLoanQuoteDisplay } from "./transfer-loan-quote";
 import { WriteLoanQuoteForm } from "./write-loan-quote";
 import { WritePropertyQuoteForm } from "./write-property-quote";
+import { currencyFormatter } from "common/formatters/number";
 
 export const getTaskComponent = (
   task: DecisionMakerTaskEvent<DecisionMakerTask>,
@@ -69,9 +70,7 @@ export const getTaskComponent = (
       const action = quote.owner === socket.playerId ? "Sell" : "Buy";
       return (
         <SimpleYesNo
-          yesOverride={`${action} ${quote.name} for ${quote.offer.toLocaleString("en-US", {
-            currency: "usd",
-          })}`}
+          yesOverride={`${action} ${quote.name} for ${currencyFormatter(quote.offer)}`}
           submit={result => socket.completeCurrentTask(result)}
           prompt={<PropertyQuoteDisplay quote={quote} state={state} />}
         />
@@ -83,9 +82,7 @@ export const getTaskComponent = (
       const action = quote.creditor === socket.playerId ? "Sell" : "Buy";
       return (
         <SimpleYesNo
-          yesOverride={`${action} loan for ${quote.offer.toLocaleString("en-US", {
-            currency: "usd",
-          })}`}
+          yesOverride={`${action} loan for ${currencyFormatter(quote.offer)}`}
           submit={result => socket.completeCurrentTask(result)}
           prompt={<TransferLoanQuoteDisplay quote={quote} state={state} />}
         />
@@ -100,13 +97,10 @@ export const getTaskComponent = (
       // TODO: highlight property color if applicable
       return (
         <SimpleYesNo
-          yesOverride={`Buy ${property.name} for ${property.basePrice.toLocaleString("en-US", {
-            currency: "usd",
-          })}`}
+          yesOverride={`Buy ${property.name} for ${currencyFormatter(property.basePrice)}`}
           submit={result => socket.completeCurrentTask(result)}
-          prompt={`Would you like to buy ${property.name} for ${property.basePrice.toLocaleString(
-            "en-US",
-            { currency: "usd" }
+          prompt={`Would you like to buy ${property.name} for ${currencyFormatter(
+            property.basePrice
           )}?`}
         />
       );
@@ -115,13 +109,10 @@ export const getTaskComponent = (
     case DecisionMakerTask.DecideToPayToGetOutOfJail:
       return (
         <SimpleYesNo
-          yesOverride={`Pay ${socket.config.jail.getOfJailBaseCost.toLocaleString("en-US", {
-            currency: "usd",
-          })}`}
+          yesOverride={`Pay ${currencyFormatter(socket.config.jail.getOfJailBaseCost)}`}
           submit={result => socket.completeCurrentTask(result)}
-          prompt={`Would you like to pay ${socket.config.jail.getOfJailBaseCost.toLocaleString(
-            "en-US",
-            { currency: "usd" }
+          prompt={`Would you like to pay ${currencyFormatter(
+            socket.config.jail.getOfJailBaseCost
           )} to get out of jail and move ${
             socket.player.mostRecentRoll![0] + socket.player.mostRecentRoll![1]
           } spaces?`}

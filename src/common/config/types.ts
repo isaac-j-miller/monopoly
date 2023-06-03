@@ -12,6 +12,9 @@ export type RuntimeConfig = {
     maxLeverage: number;
     maxLoanTerm: number;
     minLoanTerm: number;
+    turnsToCountForNPV: number;
+    maxRoundsForCashShortfall: number;
+    depreciationPerRound: number;
   };
   players: {
     count: number;

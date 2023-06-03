@@ -1,9 +1,10 @@
 import React from "react";
-import { GameState, InterestRateType, PlayerId } from "common/state/types";
+import { Button, FormGroup, NumericInput } from "@blueprintjs/core";
+import { InterestRateType, PlayerId } from "common/state/types";
 import { LoanQuote } from "common/loan/types";
 import { getNominalPaymentAmount } from "common/loan";
+import { currencyFormatter } from "common/formatters/number";
 import { HorizontalDiv, VerticalDiv } from "../../common/flex";
-import { Button, FormGroup, NumericInput } from "@blueprintjs/core";
 
 type QuoteProps = {
   playerId: PlayerId;
@@ -64,14 +65,12 @@ export const WriteLoanQuoteForm: React.FC<QuoteProps> = ({
         />
       </FormGroup>
       <p>
-        Amount: {quote.amount.toLocaleString("en-US", { currency: "usd" })} at{" "}
+        Amount: {currencyFormatter(quote.amount)} at&nbsp;
         {(quote.rate * 100).toPrecision(2)}%/turn for {quote.term} turns
       </p>
       <p>
-        Due each turn:{" "}
-        {getNominalPaymentAmount(quote.amount, quote.term, quote.rate).toLocaleString("en-US", {
-          currency: "usd",
-        })}
+        Due each turn:&nbsp;
+        {currencyFormatter(getNominalPaymentAmount(quote.amount, quote.term, quote.rate))}
       </p>
       <p>Rate Type: {InterestRateType[quote.rateType]}</p>
       <HorizontalDiv>

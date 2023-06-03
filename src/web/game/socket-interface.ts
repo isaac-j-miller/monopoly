@@ -19,6 +19,7 @@ import { Bank } from "common/player/bank";
 import { GameConfig, IGame } from "common/game/types";
 import { HumanRemoteInterface } from "./human-interface";
 import { ReadOnlyGame } from "./read-only-game";
+import { getStateFromSnapshot } from "./snapshot";
 
 export class SocketInterface {
   private _initialized = false;
@@ -66,41 +67,11 @@ export class SocketInterface {
     console.log("emitting REQUEST_STATE");
     const state: SocketStateUpdate = await this.socket.emitWithAck("REQUEST_STATE");
     console.log(state);
-    const board = new Board(state.board);
-    const propertyStore = new PropertyStore(board);
-    const loanStore = new LoanStore(Object.values(state.loans).map(loan => new Loan(loan)));
-    const playerStore = new PlayerStore([]);
-    const computerPlayers: PlayerId[] = [];
-    Object.entries(state.players).forEach(
-      ([id, { creditLoans, debtLoans, properties, ...rest }]) => {
-        const Cotr = id.startsWith("Player_") ? Player : Bank;
-        const player = new Cotr(this.config, new NoopDecisionMaker(this.config), id as PlayerId, {
-          ...rest,
-          creditLoans: new Set(creditLoans),
-          debtLoans: new Set(debtLoans),
-          properties: new Set(properties),
-        });
-        playerStore.set(player);
-        if (player.type === HumanOrComputerPlayerType.Computer) {
-          computerPlayers.push(player.id);
-        }
-      }
-    );
-    const initialState: GameState = {
-      board,
-      propertyStore,
-      // TODO: implement cards
-      chanceCards: [],
-      communityChestCards: [],
-      currentPlayerTurn: state.currentPlayerTurn,
-      loanStore,
-      playerStore,
-      playerTurnOrder: state.playerTurnOrder,
-      turn: state.turn,
-      started: state.started,
-      isDone: false,
-    };
+    const initialState = getStateFromSnapshot(state);
     this.bus = new EventBus(this.config, initialState, []);
+    const computerPlayers = initialState.playerStore.allPlayerIds().filter(id => {
+      return initialState.playerStore.get(id).type === HumanOrComputerPlayerType.Computer;
+    });
     const gameConfig: GameConfig = {
       initialState,
       gameId: this.gameId,

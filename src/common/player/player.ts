@@ -21,6 +21,7 @@ import { determineRentPaymentAmount } from "common/events/util";
 import { IPlayer } from "./types";
 import { PlayerBase } from "./base";
 import { PlayerId } from "common/state/types";
+import { currencyFormatter } from "common/formatters/number";
 
 export class Player extends PlayerBase implements IPlayer {
   upgradeProperty(propertyId: number, newLevel: PropertyLevel): void {
@@ -158,13 +159,8 @@ export class Player extends PlayerBase implements IPlayer {
     });
     if (loanPaymentsTotal > 0) {
       console.debug(
-        `${
-          this.id
-        } deciding how to cover loan payments amounting to ${loanPaymentsTotal.toLocaleString(
-          "en-US",
-          {
-            currency: "usd",
-          }
+        `${this.id} deciding how to cover loan payments amounting to ${currencyFormatter(
+          loanPaymentsTotal
         )}...`
       );
       await this.handleFinanceOption(loanPaymentsTotal, "Loan Payments");
@@ -174,10 +170,19 @@ export class Player extends PlayerBase implements IPlayer {
     await this.decisionMaker.doOptionalActions();
     // must cover shortfall if exists before ending turn
     if (this.cashOnHand < 0) {
-      console.debug(`${this.id} deciding how to cover cash shortfall of ${this.cashOnHand}...`);
+      console.debug(
+        `${this.id} deciding how to cover cash shortfall of ${currencyFormatter(
+          this.cashOnHand * -1
+        )}...`
+      );
       await this.decisionMaker.coverCashOnHandShortfall();
+      if (this.cashOnHand < 0 && this.getTotalNonCashAssetValue() > 0) {
+        // somehow we've messed up and couldn't sell anything;
+        console.debug(`${this.id} unable to sell anything!`);
+      }
     }
-    if (this.getTotalAssetValue() <= 0) {
+    const totalAssetValue = this.getTotalNonCashAssetValue();
+    if (totalAssetValue <= 0 && this.cashOnHand < 0) {
       // must declare bankruptcy
       this.declareBankruptcyInternal();
     }

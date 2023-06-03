@@ -1,15 +1,12 @@
-import { PropertyColor } from "common/board/types";
-import { Property, PropertyLevel } from "common/property/types";
+import { PositionType, PropertyColor } from "common/board/types";
+import { getRuntimeConfig } from "common/config";
+import { RuntimeConfig } from "common/config/types";
+import { calculateExpectedReturnOnPropertyPerTurn } from "common/events/util";
+import { LoanState } from "common/loan/types";
+import { GenericProperty, Property, PropertyLevel, Railroad, Utility } from "common/property/types";
+import { GameState } from "common/state/types";
+import { ILoanStore } from "common/store/types";
 
-const defaultLevelValuesMultipliers: Record<PropertyLevel, number> = {
-  [PropertyLevel.Unimproved]: 1,
-  [PropertyLevel.OneHouse]: 2,
-  [PropertyLevel.TwoHouses]: 3,
-  [PropertyLevel.ThreeHouses]: 4,
-  [PropertyLevel.FourHouses]: 5,
-  [PropertyLevel.Hotel]: 10,
-  [PropertyLevel.Skyscraper]: 15,
-};
 const defaultLevelRentsMultipliers: Record<PropertyColor, Record<PropertyLevel, number>> = {
   [PropertyColor.Brown]: {
     [PropertyLevel.Unimproved]: 1,
@@ -85,6 +82,17 @@ const defaultLevelRentsMultipliers: Record<PropertyColor, Record<PropertyLevel, 
   },
 };
 
+export const propertyUpgradeCosts: Record<PropertyColor, number> = {
+  [PropertyColor.Brown]: 50,
+  [PropertyColor.LightBlue]: 50,
+  [PropertyColor.Fuschia]: 100,
+  [PropertyColor.Orange]: 100,
+  [PropertyColor.Red]: 150,
+  [PropertyColor.Yellow]: 150,
+  [PropertyColor.Green]: 200,
+  [PropertyColor.Blue]: 200,
+};
+
 export const defaultRailroadQuantityRents: Record<number, number> = {
   0: 0,
   1: 25,
@@ -98,9 +106,78 @@ export const defaultUtilityQuantityRollMultipliers: Record<number, number> = {
   1: 4,
   2: 10,
 };
-export function getPropertyRealValue(baseValue: number, level: PropertyLevel): number {
-  return baseValue * defaultLevelValuesMultipliers[level];
+
+export function updateRailroadValue(railroad: Railroad, state: GameState, config: RuntimeConfig) {
+  const marketValue = getPropertyMarketValue(railroad, state, config.runtime.turnsToCountForNPV);
+  railroad.realValue = railroad.basePrice;
+  railroad.marketValue = marketValue;
 }
+export function updateUtilityValue(utility: Utility, state: GameState, config: RuntimeConfig) {
+  const marketValue = getPropertyMarketValue(utility, state, config.runtime.turnsToCountForNPV);
+  utility.realValue = utility.basePrice;
+  utility.marketValue = marketValue;
+}
+
+export function updatePropertyValue(property: Property, state: GameState, config: RuntimeConfig) {
+  const realValue = getPropertyRealValue(property);
+  const marketValue = getPropertyMarketValue(property, state, config.runtime.turnsToCountForNPV);
+  const rent = getPropertyRent(property.baseRent, property.level, property.color);
+  property.realValue = realValue;
+  property.marketValue = marketValue;
+  property.currentRent = rent;
+}
+
+export function getPropertyRealValue(property: Property): number {
+  const sunkMoney = propertyUpgradeCosts[property.color] * property.level;
+  const baseValue = property.basePrice;
+  return baseValue + sunkMoney;
+}
+export function getPropertyMarketValue(
+  property: GenericProperty,
+  state: GameState,
+  turnsToCount: number
+): number {
+  const sunkMoney =
+    property.propertyType === PositionType.Property
+      ? propertyUpgradeCosts[property.color] * property.level
+      : 0;
+  const baseValue = property.basePrice;
+  const discountedCashFlow = getPropertyDiscountedCashFlow(property, state);
+  return baseValue + sunkMoney + discountedCashFlow * turnsToCount;
+}
+const config = getRuntimeConfig();
+export function getCurrentAverageInterestRate(loans: LoanState[], weighted = true): number {
+  let sum = 0;
+  let count = 0;
+  loans.forEach(loan => {
+    const balance = loan.remainingPrincipal + loan.remainingInterest;
+    if (balance <= 0) {
+      return;
+    }
+    const wt = weighted ? balance : 1;
+    const weightedValue = wt * loan.rate;
+    sum += weightedValue;
+    count += wt;
+  });
+  if (count === 0) {
+    return config.bank.startingInterestRate;
+  }
+  return sum / count;
+}
+
+export function getPropertyDiscountedCashFlow(property: GenericProperty, state: GameState): number {
+  const anticipatedRentPerTurn = calculateExpectedReturnOnPropertyPerTurn(
+    state,
+    property.propertyId,
+    property.owner
+  );
+  const avgInterestRate = getCurrentAverageInterestRate(state.loanStore.all());
+  const costOfMoney = 1 + avgInterestRate;
+  const discountedCashFlow = anticipatedRentPerTurn / costOfMoney;
+  // TODO: check that this makes sense
+  return discountedCashFlow;
+}
+
 export function getPropertyRent(
   baseRent: number,
   level: PropertyLevel,
@@ -108,9 +185,10 @@ export function getPropertyRent(
 ): number {
   return baseRent * defaultLevelRentsMultipliers[color][level];
 }
+
 export function getUpgradeCost(property: Property, newLevel: PropertyLevel): number {
   const previousLevel = property.level;
-  const currentValue = getPropertyRealValue(property.basePrice, previousLevel);
-  const newValue = getPropertyRealValue(property.basePrice, newLevel);
-  return newValue - currentValue;
+  const levelDiff = newLevel - previousLevel;
+  const buildingCostPerLevel = propertyUpgradeCosts[property.color];
+  return buildingCostPerLevel * levelDiff;
 }
