@@ -9,11 +9,15 @@ export type RuntimeConfig = {
     turnLimit: number | null;
     maxCreditChainDepth: number;
     passGoAmount: number;
+    maxLeverage: number;
+    maxLoanTerm: number;
+    minLoanTerm: number;
   };
   players: {
     count: number;
     initialState: PlayerState;
     emojiPool: string[];
+    colorPool: string[];
   };
   bank: {
     startingMoney: number;

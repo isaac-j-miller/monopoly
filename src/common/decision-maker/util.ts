@@ -56,6 +56,9 @@ export const calculateCreditRating = (params: CreditRatingParams): CreditRating 
   } else {
     score -= 0.2;
   }
+  if (Number.isNaN(score)) {
+    throw new Error("credit rating is NaN");
+  }
   const asRating = deNormalizeCreditRating(score);
   return asRating;
 };

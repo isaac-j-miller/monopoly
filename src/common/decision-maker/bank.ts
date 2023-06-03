@@ -39,11 +39,17 @@ export class BankDecisionMaker extends DecisionMakerBase implements IDecisionMak
   }
   async getLoanQuoteForPlayer(playerId: PlayerId, amount: number): Promise<LoanQuote | null> {
     const player = this.game.state.playerStore.get(playerId);
-    const { creditRating } = player;
+    const { creditRating, creditLimit } = player;
+    const futureDebt = player.getTotalLiabilityValue() + amount;
     const { creditRatingLendingThreshold } = this.player;
-    if (creditRating < creditRatingLendingThreshold) {
+    if (
+      creditRating < creditRatingLendingThreshold ||
+      futureDebt > creditLimit ||
+      amount > this.player.cashOnHand
+    ) {
       return null;
     }
+
     const interestRate = this.config.bank.startingInterestRate;
     const multiplier = this.config.credit.ratingMultiplierOnInterest[creditRating];
     const rate = interestRate * multiplier;

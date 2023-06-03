@@ -122,6 +122,7 @@ export class SocketInterface {
       console.log("socket disconnected", reason);
       this.onSocketDisconnect(reason);
     });
+    this.socket.on("SNAPSHOT", this.processSnapshot);
     console.log("attempting to parse key");
     await axios.get<OptionalGamePlayer>(`/api/parse-key/${this.key}`).then(resp => {
       this._gamePlayer = resp.data;

@@ -128,6 +128,9 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     // TODO: try downgrading properties
   }
   async coverCashOnHandShortfall(): Promise<void> {
+    if (this.player.cashOnHand < 0) {
+      return;
+    }
     // need to get a loan or sell a property
     await this.player.handleFinanceOption(
       this.player.cashOnHand * -1 + 1,
@@ -240,6 +243,9 @@ export class ComputerDecisionMaker extends DecisionMakerBase implements IDecisio
     }
     const interestRate = this.config.bank.startingInterestRate;
     const multiplier = this.config.credit.ratingMultiplierOnInterest[creditRating];
+    if (typeof multiplier !== "number") {
+      throw new Error(`no multiplier for rating ${CreditRating[creditRating]} (${creditRating})`);
+    }
     const rate = interestRate * multiplier;
     const quote: LoanQuote = {
       // TODO: figure out variable rate loans

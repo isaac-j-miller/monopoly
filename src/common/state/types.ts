@@ -50,6 +50,7 @@ export interface PlayerState {
   emoji: string;
   type: HumanOrComputerPlayerType;
   isBankrupt: boolean;
+  creditLimit: number;
 }
 
 export interface GameState {

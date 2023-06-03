@@ -3,7 +3,11 @@ import { ILoan, LoanQuote, LoanState } from "./types";
 import { getUniqueId } from "common/util";
 
 export class Loan implements ILoan {
-  constructor(private state: LoanState) {}
+  constructor(private state: LoanState) {
+    if (Number.isNaN(this.state.rate)) {
+      throw new Error("somehow got a NaN rate");
+    }
+  }
   toObject(): LoanState {
     return this.state;
   }

@@ -45,6 +45,9 @@ export class PlayerBase {
   protected get isRegistered() {
     return !!this.game;
   }
+  public get creditLimit() {
+    return this.state.creditLimit;
+  }
   public get isBankrupt() {
     return this.state.isBankrupt;
   }
@@ -222,6 +225,11 @@ export class PlayerBase {
       incomePerTurn,
     });
   }
+  protected recalculateCreditLimit() {
+    const totalAssets = this.getTotalNonCashAssetValue();
+    const creditLimit = Math.abs(this.config.runtime.maxLeverage * totalAssets);
+    return creditLimit;
+  }
   protected recalculateCreditRatingLendingThreshold(): CreditRating {
     // TODO: more sophisticated implementation
     if (this.creditRating >= CreditRating.B) {
@@ -272,6 +280,9 @@ export class PlayerBase {
     let expectedIncome = 0;
     this.creditLoans.forEach(loanId => {
       const payment = this.game.state.loanStore.get(loanId).getNominalPaymentAmount();
+      if (Number.isNaN(payment)) {
+        throw new Error();
+      }
       expectedIncome += payment;
     });
     this.properties.forEach(propertyId => {
@@ -280,8 +291,14 @@ export class PlayerBase {
         propertyId,
         this.id
       );
+      if (Number.isNaN(expectedRentPerTurn)) {
+        throw new Error();
+      }
       expectedIncome += expectedRentPerTurn;
     });
+    if (Number.isNaN(expectedIncome)) {
+      throw new Error();
+    }
     return expectedIncome;
   }
   public getNetWorth(): number {
@@ -291,16 +308,16 @@ export class PlayerBase {
     return netWorth;
   }
   public recalculateValues(): void {
-    console.log(`Recalculating values for ${this.id}...`);
     this.state.creditRating = this.recalculateCreditRating();
     this.state.creditRatingLendingThreshold = this.recalculateCreditRatingLendingThreshold();
     this.state.netWorth = this.getNetWorth();
+    this.state.creditLimit = this.recalculateCreditLimit();
   }
-  public getTotalAssetValue(): number {
-    let value = this.state.cashOnHand;
+  protected getTotalNonCashAssetValue(): number {
+    let value = 0;
     this.state.properties.forEach(id => {
       const property = this.game.state.propertyStore.get(id);
-      value += property.marketValue;
+      value += property.realValue;
     });
     this.state.creditLoans.forEach(id => {
       const loan = this.game.state.loanStore.get(id);
@@ -308,6 +325,11 @@ export class PlayerBase {
       value += loanFaceValue;
     });
     return value;
+  }
+  public getTotalAssetValue(): number {
+    const cash = this.state.cashOnHand;
+    const nonCash = this.getTotalNonCashAssetValue();
+    return cash + nonCash;
   }
   public getTotalLiabilityValue(): number {
     let value = 0;
@@ -339,10 +361,10 @@ export class PlayerBase {
       }
       const offer = await player.getLoanQuoteForPlayer(this.id, amount, depth);
       if (offer) {
-        console.log(`Got loan offer from ${player.id}`);
+        // console.log(`Got loan offer from ${player.id}`);
         quotes.push(offer);
       } else {
-        console.log(`${player.id} declined to offer a loan`);
+        // console.log(`${player.id} declined to offer a loan`);
       }
     }
     return quotes;

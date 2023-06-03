@@ -22,6 +22,7 @@ export interface IPlayer {
   readonly debtLoans: Set<LoanId>;
   readonly getOutOfJailFreeCards: number;
   readonly isBankrupt: boolean;
+  readonly creditLimit: number;
   getState(): SerializablePlayerState;
   setMostRecentRoll(roll: [number, number]): void;
   setPosition(position: number): void;

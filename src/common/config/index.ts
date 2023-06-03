@@ -8,7 +8,7 @@ export function getRuntimeConfig(): RuntimeConfig {
   const config: RuntimeConfig = {
     bank: {
       startingInterestRate: 0.05,
-      startingMoney: 10000,
+      startingMoney: 5e3,
       riskiness: 0,
       emoji: "🏦",
     },
@@ -47,12 +47,16 @@ export function getRuntimeConfig(): RuntimeConfig {
       minTurnDuration: 100,
       maxCreditChainDepth: 3,
       passGoAmount: 200,
+      maxLeverage: 15,
+      minLoanTerm: 5,
+      maxLoanTerm: 40,
     },
     players: {
       count: 8,
       initialState: {
         isBankrupt: false,
         cashOnHand: 1000,
+        creditLimit: 10000,
         creditLoans: new Set(),
         creditRating: CreditRating.A,
         creditRatingLendingThreshold: CreditRating.B,
@@ -69,6 +73,18 @@ export function getRuntimeConfig(): RuntimeConfig {
         type: HumanOrComputerPlayerType.Computer,
       },
       emojiPool: ["👨", "🤖", "🎃", "👻", "😈", "🧚‍♀️", "👽", "🤠", "🤡", "🤑"],
+      colorPool: [
+        "#3500CA",
+        "#FF2813",
+        "#FFB000",
+        "#00B600",
+        "#6C3CBC",
+        "#53270B",
+        "#000000",
+        "#003300",
+        "#666699",
+        "#ff66ff",
+      ],
     },
     cli: {
       board: {

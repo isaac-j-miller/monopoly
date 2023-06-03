@@ -15,7 +15,6 @@ export class SocketIOGameDisplay implements IDisplay {
     private readonly gameStore: GameStore
   ) {}
   processEvent = (event: GameEvent) => {
-    console.debug(`sending game event ${event.type}: ${EventType[event.type]}`);
     this.io.to(this.gameId).emit("GAME_EVENT", event);
     if (event.type === EventType.CompleteTurn) {
       const state = this.getState();

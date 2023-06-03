@@ -6,6 +6,7 @@ import {
   GameEvent,
   GetOutOfJailEvent,
   GetOutOfJailReason,
+  LoanPaymentEvent,
   LoanTransferEvent,
   NullifyLoanEvent,
   PlayerDeclareBankruptcyEvent,
@@ -104,7 +105,7 @@ export class Player extends PlayerBase implements IPlayer {
         break;
       case PositionType.Tax: {
         const { baseAmount } = boardPosition as BoardPosition<PositionType.Tax>;
-        console.debug(`${this.id} deciding whether how to pay tax...`);
+        console.debug(`${this.id} deciding how to pay tax of ${baseAmount}...`);
         await this.handleFinanceOption(baseAmount, "Tax");
         break;
       }
@@ -117,7 +118,9 @@ export class Player extends PlayerBase implements IPlayer {
         const property = this.game.state.propertyStore.get(propertyId);
         const owner = this.game.state.playerStore.get(property.owner);
         if (owner.isBank) {
-          console.debug(`${this.id} deciding whether to buy ${property.name} from the bank...`);
+          console.debug(
+            `${this.id} deciding whether to buy ${property.name} from the bank for ${property.basePrice}...`
+          );
           const shouldBuy = await this.decisionMaker.decideToBuyPropertyFromBank();
           if (!shouldBuy) {
             break;
@@ -132,9 +135,10 @@ export class Player extends PlayerBase implements IPlayer {
         } else if (owner.id === this.id) {
           break;
         } else {
+          // amount was already deducted by the event bus
           const amountPaid = this.getRentAmount(property);
           console.debug(
-            `${this.id} deciding how to pay rent for ${property.name} to ${owner.id}...`
+            `${this.id} deciding how to pay rent of ${amountPaid} for ${property.name} to ${owner.id}...`
           );
           await this.handleFinanceOption(amountPaid, "Rent Payment");
         }
@@ -148,7 +152,7 @@ export class Player extends PlayerBase implements IPlayer {
     this.state.debtLoans.forEach(loanId => {
       this.game.state.loanStore.withLoan(loanId, loan => {
         const nominalPaymentAmount = loan.getNominalPaymentAmount();
-        loan.makePayment(nominalPaymentAmount);
+        this.makeLoanPayment(loan.id, nominalPaymentAmount);
         loanPaymentsTotal += nominalPaymentAmount;
       });
     });
@@ -165,37 +169,26 @@ export class Player extends PlayerBase implements IPlayer {
       );
       await this.handleFinanceOption(loanPaymentsTotal, "Loan Payments");
     }
-    // if we have a negative cash balance, cover it before continuing with optional actions
-    if (this.cashOnHand < 0) {
-      console.debug(
-        `${this.id} deciding how to cover cash shortfall of ${loanPaymentsTotal.toLocaleString(
-          "en-US",
-          {
-            currency: "usd",
-          }
-        )}...`
-      );
-      await this.decisionMaker.coverCashOnHandShortfall();
-    }
     // now all the necessary stuff is out of the way, we can now make offers to players/pay extra on debts/upgrade property/etc. this is done in the decisionMaker.doOptionalActions() method
-    console.debug(`${this.id} deciding on additional actions...`);
+    // console.debug(`${this.id} deciding on additional actions...`);
     await this.decisionMaker.doOptionalActions();
     // must cover shortfall if exists before ending turn
     if (this.cashOnHand < 0) {
-      console.debug(
-        `${this.id} deciding how to cover cash shortfall of ${loanPaymentsTotal.toLocaleString(
-          "en-US",
-          {
-            currency: "usd",
-          }
-        )}...`
-      );
+      console.debug(`${this.id} deciding how to cover cash shortfall of ${this.cashOnHand}...`);
       await this.decisionMaker.coverCashOnHandShortfall();
     }
-    if (this.cashOnHand < 0) {
+    if (this.getTotalAssetValue() <= 0) {
       // must declare bankruptcy
       this.declareBankruptcyInternal();
     }
+  }
+  private makeLoanPayment(loanId: string, paymentAmount: number) {
+    const event: Omit<LoanPaymentEvent, "turn" | "order"> = {
+      type: EventType.LoanPayment,
+      amount: paymentAmount,
+      loanId,
+    };
+    this.game.processEvent(event);
   }
   declareBankruptcy(): void {
     console.log(`${this.id} has declared bankruptcy!`);
@@ -243,6 +236,7 @@ export class Player extends PlayerBase implements IPlayer {
       this.game.state.playerTurnOrder.length === 0 &&
       this.game.state.playerTurnOrder[0] === this.id
     ) {
+      console.log("not declaring bankruptcy because I just won");
       return;
     }
     const event: Omit<PlayerDeclareBankruptcyEvent, "turn" | "order"> = {

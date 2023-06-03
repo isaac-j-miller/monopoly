@@ -21,7 +21,7 @@ const determineRentPaymentAmountForProperty = (
     return p.owner === owner;
   });
   const level = property.level ?? levelOverride;
-  const rent = getPropertyRent(property.baseRent, level);
+  const rent = getPropertyRent(property.baseRent, level, property.color);
   if (ownerHasAllOfColor && level === 0) {
     return rent * 2;
   }
@@ -114,5 +114,9 @@ export const calculateExpectedReturnOnPropertyPerTurn = (
   const property = state.propertyStore.get(propertyId);
   const rent = calculateExpectedRentForProperty(state, property, owner);
   const expectedRentPerTurn = avgHitsPerTurn * rent;
+
+  if (Number.isNaN(expectedRentPerTurn)) {
+    throw new Error();
+  }
   return expectedRentPerTurn;
 };

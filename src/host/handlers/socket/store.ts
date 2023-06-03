@@ -64,7 +64,7 @@ export class GameStore {
     const bankDecisionMaker = new BankDecisionMaker(this.config);
     const bankState: PlayerState = {
       ...this.config.players.initialState,
-      cashOnHand: Number.POSITIVE_INFINITY,
+      cashOnHand: this.config.bank.startingMoney,
       creditRating: CreditRating.AAA,
       riskiness: params.bank.riskiness,
       emoji: this.config.bank.emoji,

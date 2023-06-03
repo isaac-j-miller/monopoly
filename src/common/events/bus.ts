@@ -4,6 +4,7 @@ import { getPropertyRealValue, getPropertyRent, getUpgradeCost } from "common/pr
 import { BoardPosition, PositionType } from "common/board/types";
 import { RuntimeConfig } from "common/config/types";
 import { Property } from "common/property/types";
+import { Loan } from "common/loan";
 import { EventHook } from "common/game/types";
 import {
   CompletePlayerTurnEvent,
@@ -40,12 +41,20 @@ import {
   PlayerPassGoEvent,
 } from "./types";
 import { determineRentPaymentAmount } from "./util";
-import { Loan } from "common/loan";
 
 type GameStateAndEventsObject = {
   initialState: GameState;
   events: GameEvent[];
 };
+
+const eventsToKeep = new Set<EventType>([
+  EventType.LoanCreation,
+  EventType.LoanTransfer,
+  EventType.PropertyTransfer,
+  EventType.RentPayment,
+  EventType.PlayerVictory,
+  EventType.PlayerDeclareBankruptcy,
+]);
 
 export class EventBus {
   private eventHooks: EventHook[];
@@ -72,7 +81,9 @@ export class EventBus {
     return { initialState, events };
   }
   processEvent(event: GameEvent) {
-    console.debug(`Event bus got event ${EventType[event.type]}`, event);
+    if (eventsToKeep.has(event.type)) {
+      console.debug(`Event bus got event ${EventType[event.type]}`, event);
+    }
     this.handleStateUpdate(event);
     this.events.push(event);
     this.eventHooks.forEach(hook => {
@@ -184,11 +195,23 @@ export class EventBus {
     this.currentState.currentPlayerTurn = turnOrder;
   }
   private processCompletePlayerTurn(event: CompletePlayerTurnEvent) {
-    console.log(`${event.player} completed turn ${event.turn}`);
+    // console.log(`${event.player} completed turn ${event.turn}`);
   }
   private processCompleteTurn(_event: CompleteTurnEvent) {
     this.currentState.currentPlayerTurn = 0;
     this.currentState.turn++;
+    this.state.loanStore.all().forEach(loan => {
+      if (loan.getCurrentBalance() > 0) {
+        return;
+      }
+      const event: LoanAccrueInterestEvent = {
+        type: EventType.LoanAccrueInterest,
+        loanId: loan.id,
+        order: this.currentState.currentPlayerTurn,
+        turn: this.currentState.turn,
+      };
+      this.processEvent(event);
+    });
   }
   private processGoToJail(event: GoToJailEvent) {
     const { player, turn } = event;
@@ -217,8 +240,22 @@ export class EventBus {
     const { loanId, amount } = event;
     this.currentState.loanStore.withLoan(loanId, loan => {
       this.currentState.playerStore.withPlayer(loan.creditor, creditor => creditor.addCash(amount));
-      this.currentState.playerStore.withPlayer(loan.debtor, debtor => debtor.subtractCash(amount));
-      loan.makePayment(amount);
+      this.currentState.playerStore.withPlayer(loan.debtor, debtor => {
+        debtor.subtractCash(amount);
+        const balance = loan.makePayment(amount);
+        if (balance < 0) {
+          const abs = Math.abs(balance);
+          debtor.addCash(abs);
+          const payoffEvent: PlayerPayOffLoanEvent = {
+            type: EventType.PlayerPayOffLoan,
+            loanId,
+            order: this.state.currentPlayerTurn,
+            player: debtor.id,
+            turn: this.state.turn,
+          };
+          this.processEvent(payoffEvent);
+        }
+      });
     });
   }
   private processLoanRaiseInterestRate(event: LoanChangeInterestRateEvent) {
@@ -346,15 +383,9 @@ export class EventBus {
   private processPlayerPayOffLoan(event: PlayerPayOffLoanEvent) {
     const { loanId } = event;
     const loan = this.currentState.loanStore.get(loanId);
-    const payoffAmount = loan.getCurrentBalance();
-    const paymentEvent: LoanPaymentEvent = {
-      amount: payoffAmount,
-      loanId,
-      order: event.order,
-      turn: event.turn,
-      type: EventType.LoanPayment,
-    };
-    this.processEvent(paymentEvent);
+    const { creditor, debtor } = loan;
+    this.currentState.playerStore.withPlayer(creditor, player => player.removeCreditLoan(loanId));
+    this.currentState.playerStore.withPlayer(debtor, player => player.removeDebtLoan(loanId));
   }
   private processPropertyTransfer(event: PropertyTransferEvent) {
     const { amount, from, to, propertyId, propertyType } = event;
@@ -397,7 +428,7 @@ export class EventBus {
       this.processEvent(payBankEvent);
       property.level = newLevel;
       property.realValue = getPropertyRealValue(property.basePrice, property.level);
-      property.currentRent = getPropertyRent(property.baseRent, property.level);
+      property.currentRent = getPropertyRent(property.baseRent, property.level, property.color);
     });
   }
   private processPropertyDowngrade(event: PropertyDowngradeEvent) {
@@ -416,7 +447,7 @@ export class EventBus {
       this.processEvent(bankPayPlayerEvent);
       property.level = newLevel;
       property.realValue = getPropertyRealValue(property.basePrice, property.level);
-      property.currentRent = getPropertyRent(property.baseRent, property.level);
+      property.currentRent = getPropertyRent(property.baseRent, property.level, property.color);
     });
   }
   private processRentPayment(event: RentPaymentEvent) {
