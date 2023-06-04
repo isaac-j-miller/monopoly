@@ -6,20 +6,14 @@ import { OptionalGamePlayer, SerializedGamePlayer } from "common/shared/types";
 import { GameEvent } from "common/events/types";
 import { EventBus } from "common/events/bus";
 import { SocketStateUpdate } from "common/state/socket";
-import { Board } from "common/board/board";
-import { PlayerStore } from "common/store/player-store";
 import { HumanOrComputerPlayerType, RuntimeConfig } from "common/config/types";
 import { getRuntimeConfig } from "common/config";
-import { LoanStore } from "common/store/loan-store";
-import { Loan } from "common/loan";
-import { Player } from "common/player/player";
-import { PropertyStore } from "common/store/property-store";
-import { NoopDecisionMaker } from "common/decision-maker/noop";
-import { Bank } from "common/player/bank";
 import { GameConfig, IGame } from "common/game/types";
 import { HumanRemoteInterface } from "./human-interface";
 import { ReadOnlyGame } from "./read-only-game";
 import { getStateFromSnapshot } from "./snapshot";
+import { SnapshotProcessor } from "./snapshot-processor";
+import { dataGenerators } from "./data-generators";
 
 export class SocketInterface {
   private _initialized = false;
@@ -29,17 +23,18 @@ export class SocketInterface {
   public humanInterface?: HumanRemoteInterface;
   private gameConfig!: GameConfig;
   private game!: IGame;
-  public readonly snapshots: SocketStateUpdate[];
+  public readonly snapshots:SnapshotProcessor;
   constructor(
     readonly socket: Socket,
     private key: SerializedGamePlayer,
     private setReadyState: (state: boolean) => void,
     private counter: () => number,
     private incrementCounter: () => void,
-    private readonly onSocketDisconnect: (reason: Socket.DisconnectReason) => void
+    private readonly onSocketDisconnect: (reason: Socket.DisconnectReason) => void,
+    incrementSnapshotCounter: ()=>void
   ) {
     this.config = getRuntimeConfig();
-    this.snapshots = [];
+    this.snapshots = new SnapshotProcessor(dataGenerators, incrementSnapshotCounter);
   }
   get state(): GameState {
     return this.bus.state;
@@ -59,15 +54,12 @@ export class SocketInterface {
     this.bus.processEvent(event);
     this.incrementCounter();
   };
-  processSnapshot = (snapshot: SocketStateUpdate) => {
-    const { turn } = snapshot;
-    this.snapshots[turn] = snapshot;
-  };
   async getInitialState() {
     console.log("emitting REQUEST_STATE");
     const state: SocketStateUpdate = await this.socket.emitWithAck("REQUEST_STATE");
     console.log(state);
     const initialState = getStateFromSnapshot(state);
+    this.snapshots.processSnapshot(state);
     this.bus = new EventBus(this.config, initialState, []);
     const computerPlayers = initialState.playerStore.allPlayerIds().filter(id => {
       return initialState.playerStore.get(id).type === HumanOrComputerPlayerType.Computer;
@@ -93,7 +85,7 @@ export class SocketInterface {
       console.log("socket disconnected", reason);
       this.onSocketDisconnect(reason);
     });
-    this.socket.on("SNAPSHOT", this.processSnapshot);
+    this.socket.on("SNAPSHOT", this.snapshots.processSnapshot);
     console.log("attempting to parse key");
     await axios.get<OptionalGamePlayer>(`/api/parse-key/${this.key}`).then(resp => {
       this._gamePlayer = resp.data;

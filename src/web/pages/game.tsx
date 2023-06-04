@@ -17,11 +17,10 @@ export const Game: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
   const [counter, setCounter] = React.useState<number>(0);
-  const incrementCounter = () => {
-    setCounter(c => {
-      return c + 1;
-    });
-  };
+  const [snapshotCounter, setSnapshotCounter] = React.useState<number>(0);
+  const incrementCounter = () => setCounter(c => c + 1 )
+  const incrementSnapshotCounter = () => setSnapshotCounter(c=>c+1)
+  
   const onDisconnect = (reason: Socket.DisconnectReason) => {
     if (reason === "io server disconnect") {
       navigate("/");
@@ -34,7 +33,7 @@ export const Game: React.FC = () => {
     const s = io({
       query: { id },
     });
-    const si = new SocketInterface(s, id, setReady, () => counter, incrementCounter, onDisconnect);
+    const si = new SocketInterface(s, id, setReady, () => counter, incrementCounter, onDisconnect, incrementSnapshotCounter);
     void si.setup();
     return si;
   }, [id]);
@@ -61,7 +60,7 @@ export const Game: React.FC = () => {
           )}
           <GameBoard socket={socket} counter={counter} />
           <Drawer onClose={() => setDrawerOpen(false)} isOpen={drawerOpen}>
-            <Panel counter={counter} socket={socket} playerId={socket.playerId}></Panel>
+            <Panel counter={snapshotCounter} socket={socket} playerId={socket.playerId}></Panel>
           </Drawer>
         </HorizontalDiv>
       ) : (

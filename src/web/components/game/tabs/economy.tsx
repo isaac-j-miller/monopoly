@@ -3,7 +3,6 @@ import { assertNever } from "common/util";
 import { currencyFormatter } from "common/formatters/number";
 import { GraphsContainer, TabProps, TabRoot } from "./common";
 import { SnapshotGraph } from "./snapshot-graph";
-import { getTotalDebtAndIncome } from "./value-functions";
 
 export const EconomyTab: React.FC<TabProps> = ({ socket, counter }) => {
   const { snapshots } = socket;
@@ -15,9 +14,8 @@ export const EconomyTab: React.FC<TabProps> = ({ socket, counter }) => {
           title="Debt vs Est. Income Per Turn"
           valueFormatter={currencyFormatter}
           counter={counter}
-          snapshots={snapshots}
+          data={snapshots.getData("property-value-debt-income")}
           keys={["debt", "income"]}
-          getValue={getTotalDebtAndIncome}
           chartId="eco-debt-income"
           lineType={"basis"}
           yAxisLabel="Amount"

@@ -10,14 +10,13 @@ import {
   Legend,
   YAxisProps,
 } from "recharts";
-import { SocketStateUpdate } from "common/state/socket";
 import { getRuntimeConfig } from "common/config";
 
 export type SnapshotsGraphProps = {
   counter: number;
   chartId: string;
   keys: string[];
-  snapshots: SocketStateUpdate[];
+  data: DataPoint[];
   lineType: CurveType;
   yAxisLabel: string;
   title: string;
@@ -26,7 +25,6 @@ export type SnapshotsGraphProps = {
   yAxisLabelAdjustment: number;
   lineLabelFunction: (key: string) => string;
   valueFormatter: (value: number) => string;
-  getValue: (key: string, snapshot: SocketStateUpdate) => number;
 };
 
 type DataPoint = {
@@ -38,30 +36,17 @@ export const SnapshotGraph: React.FC<SnapshotsGraphProps> = ({
   yAxisRange,
   yAxisLabelAdjustment,
   title,
-  snapshots,
+  data,
   keys,
   lineType,
   yAxisLabel,
-  getValue,
   valueFormatter,
   chartId,
   lineLabelFunction,
+  counter
 }) => {
   // TODO: get dynamic color from game config
   const config = React.useMemo(() => getRuntimeConfig(), []);
-  const datapoints: DataPoint[] = [];
-
-  snapshots.forEach(snapshot => {
-    if (!snapshot) {
-      return;
-    }
-    const point: DataPoint = { x: snapshot.turn };
-    keys.forEach(key => {
-      const value = getValue(key, snapshot);
-      point[key] = value;
-    });
-    datapoints.push(point);
-  });
   const yAxisProps: Partial<YAxisProps> = {};
   if (yAxisIncrement && yAxisRange) {
     const count = (yAxisRange[1] - yAxisRange[0]) / yAxisIncrement;
@@ -79,13 +64,16 @@ export const SnapshotGraph: React.FC<SnapshotsGraphProps> = ({
         right: 10,
       }}
       title={title}
-      data={datapoints}
+      data={data}
+      key={counter}
     >
       <text x={460} y={10} fill="black" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize="18">{title}</tspan>
       </text>
       {keys.map((key, i) => (
         <Line
+        isAnimationActive={false}
+        repeatCount={counter}
           type={lineType}
           dataKey={key}
           key={chartId + "_" + key + "_line"}

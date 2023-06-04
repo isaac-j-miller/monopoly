@@ -1,5 +1,4 @@
 import { SocketStateUpdate } from "common/state/socket";
-import { assertNever } from "common/util";
 import { getNominalPaymentAmount } from "common/loan";
 import { calculateExpectedReturnOnPropertyPerTurn } from "common/events/util";
 import { getStateFromSnapshot } from "src/web/game/snapshot";
@@ -13,7 +12,7 @@ export const getTotalDebt = (snapshot: SocketStateUpdate): number => {
   return debt;
 };
 const config = getRuntimeConfig();
-const getTotalIncome = (snapshot: SocketStateUpdate): number => {
+export const getTotalIncome = (snapshot: SocketStateUpdate): number => {
   let income = 0;
   Object.values(snapshot.loans).forEach(loan => {
     const amt = loan.remainingInterest + loan.remainingPrincipal;
@@ -41,15 +40,3 @@ const getTotalIncome = (snapshot: SocketStateUpdate): number => {
   return income;
 };
 
-export const getTotalDebtAndIncome = (key: string, snapshot: SocketStateUpdate): number => {
-  const asKey = key as "debt" | "income";
-  switch (asKey) {
-    case "debt":
-      return getTotalDebt(snapshot);
-    case "income":
-      return getTotalIncome(snapshot);
-    default:
-      assertNever(asKey);
-  }
-  throw new Error("somehow fell through");
-};
